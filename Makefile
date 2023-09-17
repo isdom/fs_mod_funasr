@@ -8,7 +8,7 @@ CLI_STRIP=$(CLI_CC_PRE)strip
 
 
 CFLAGS += -shared -fPIC -O2 -Wall
-SER_SRCS=mod_asr_funasr.cpp
+SER_SRCS=mod_funasr.cpp
 
 SDK_LIBS=-lpthread -ldl -lanl -D_GLIBCXX_USE_CXX11_ABI=0
 SDK_INCLUDE=-I./third_party/websocket -I./third_party/asio/asio/include -I./third_party/json/include
