@@ -482,41 +482,7 @@ funasr_client *generateAsrClient(AsrParamCallBack *cbParam) {
     }
 
     fac->m_client.set_tls_init_handler(bind(&OnTlsInit, ::_1));
-
-    /*
-    request->setOnTranscriptionStarted(onTranscriptionStarted, cbParam);
-    // 设置识别启动回调函数
-    request->setOnTranscriptionResultChanged(onAsrTranscriptionResultChanged, cbParam);
-    // 设置识别结果变化回调函数
-    request->setOnTranscriptionCompleted(onAsrTranscriptionCompleted, cbParam);
-    // 设置语音转写结束回调函数
-    request->setOnSentenceBegin(onAsrSentenceBegin, cbParam);
-    // 设置一句话开始回调函数
-    request->setOnSentenceEnd(onAsrSentenceEnd, cbParam);
-    // 设置一句话结束回调函数
-    request->setOnTaskFailed(onAsrTaskFailed, cbParam);
-    // 设置异常识别回调函数
-    request->setOnChannelClosed(onAsrChannelClosed, cbParam);
-    // 设置识别通道关闭回调函数
-    request->setOnSentenceSemantics(onAsrSentenceSemantics, cbParam);
-    //设置二次结果返回回调函数, 开启enable_nlp后返回
-    request->setAppKey(g_appkey.c_str());
-    // 设置AppKey, 必填参数, 请参照官网申请
-    request->setUrl(g_nlsUrl.c_str());
-    // 设置ASR 服务地址, 可使用公网 或 ECS 内网地址，具体参见: https://help.aliyun.com/document_detail/84428.html?spm=a2c4g.148847.0.0.1b704938UF5b6y
-    request->setFormat("pcm");
-    // 设置音频数据编码格式, 默认是pcm
-    request->setSampleRate(SAMPLE_RATE);
-    // 设置音频数据采样率, 可选参数，目前支持16000, 8000. 默认是16000
-    request->setIntermediateResult(true);
-    // 设置是否返回中间识别结果, 可选参数. 默认false
-    request->setPunctuationPrediction(true);
-    // 设置是否在后处理中添加标点, 可选参数. 默认false
-    request->setInverseTextNormalization(true);
-    // 设置是否在后处理中执行数字转写, 可选参数. 默认false
-    request->setToken(g_token.c_str());
-     */
-
+    
 //    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vol multiplier is:%f\n", g_asrurl.c_str(), g_vol_multiplier);
     return fac;
 }
@@ -747,6 +713,64 @@ static switch_bool_t asr_callback(switch_media_bug_t *bug, void *user_data, swit
     return SWITCH_TRUE;
 }
 
+switch_status_t on_channel_destroy(switch_core_session_t *session) {
+    switch_da_t *pvt;
+    switch_channel_t *channel = switch_core_session_get_channel(session);
+    switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_NOTICE, "%s on_destroy, release all resource for session\n",
+                      switch_channel_get_name(channel));
+
+    if ((pvt = (switch_da_t *) switch_channel_get_private(channel, "asr"))) {
+        if (pvt->resampler) {
+            switch_resample_destroy(&pvt->resampler);
+        }
+        switch_mutex_destroy(pvt->mutex);
+        switch_core_destroy_memory_pool(&pvt->pool);
+        switch_channel_set_private(channel, "asr", NULL);
+    }
+    return SWITCH_STATUS_SUCCESS;
+}
+
+switch_state_handler_table_t asr_cs_handlers = {
+        /*! executed when the state changes to init */
+        // switch_state_handler_t on_init;
+        NULL,
+        /*! executed when the state changes to routing */
+        // switch_state_handler_t on_routing;
+        NULL,
+        /*! executed when the state changes to execute */
+        // switch_state_handler_t on_execute;
+        NULL,
+        /*! executed when the state changes to hangup */
+        // switch_state_handler_t on_hangup;
+        NULL,
+        /*! executed when the state changes to exchange_media */
+        // switch_state_handler_t on_exchange_media;
+        NULL,
+        /*! executed when the state changes to soft_execute */
+        // switch_state_handler_t on_soft_execute;
+        NULL,
+        /*! executed when the state changes to consume_media */
+        // switch_state_handler_t on_consume_media;
+        NULL,
+        /*! executed when the state changes to hibernate */
+        // switch_state_handler_t on_hibernate;
+        NULL,
+        /*! executed when the state changes to reset */
+        // switch_state_handler_t on_reset;
+        NULL,
+        /*! executed when the state changes to park */
+        // switch_state_handler_t on_park;
+        NULL,
+        /*! executed when the state changes to reporting */
+        // switch_state_handler_t on_reporting;
+        NULL,
+        /*! executed when the state changes to destroy */
+        // switch_state_handler_t on_destroy;
+        on_channel_destroy,
+        // int flags;
+        0
+};
+
 // uuid_start_funasr <uuid> funurl=<uri>
 #define MAX_API_ARGC 3
 
@@ -755,6 +779,10 @@ SWITCH_STANDARD_API(uuid_start_funasr_function) {
         stream->write_function(stream, "uuid_start_funasr: parameter missing.\n");
         return SWITCH_STATUS_SUCCESS;
     }
+
+    switch_status_t status = SWITCH_STATUS_SUCCESS;
+    switch_core_session_t *ses = NULL;
+    char *_funurl = NULL;
 
     switch_memory_pool_t *pool;
     switch_core_new_memory_pool(&pool);
@@ -767,11 +795,9 @@ SWITCH_STANDARD_API(uuid_start_funasr_function) {
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "cmd:%s, args count: %d\n", mycmd, argc);
 
     if (argc < 2) {
-        stream->write_function(stream, "parameter number is invalid.\n");
-        return SWITCH_STATUS_SUCCESS;
+        stream->write_function(stream, "uuid is required.\n");
+        switch_goto_status(SWITCH_STATUS_SUCCESS, end);
     }
-
-    char *_funurl = NULL;
 
     for (int idx = 1; idx < MAX_API_ARGC; idx++) {
         if (argv[idx] != NULL) {
@@ -792,35 +818,28 @@ SWITCH_STANDARD_API(uuid_start_funasr_function) {
 
     if (_funurl == NULL) {
         stream->write_function(stream, "funurl is required.\n");
-        return SWITCH_STATUS_SUCCESS;
+        switch_goto_status(SWITCH_STATUS_SUCCESS, end);
     }
 
-    switch_core_session_t *ses = switch_core_session_force_locate(argv[0]);
+    ses = switch_core_session_force_locate(argv[0]);
     if (ses) {
         switch_channel_t *channel = switch_core_session_get_channel(ses);
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "starting funasr:%s\n",
                           switch_channel_get_name(channel));
 
-        switch_status_t status;
         switch_da_t *pvt;
-        switch_codec_implementation_t read_impl;
-
-        memset(&read_impl, 0, sizeof(switch_codec_implementation_t));
-
-        //获取读媒体编码实现方法
-        switch_core_session_get_read_impl(ses, &read_impl);
         if (!(pvt = (switch_da_t *) switch_core_session_alloc(ses, sizeof(switch_da_t)))) {
-            goto lab_end;
+            switch_goto_status(SWITCH_STATUS_SUCCESS, unlock);
         }
         pvt->started = 0;
         pvt->stoped = 0;
         pvt->starting = 0;
         pvt->datalen = 0;
         pvt->session = ses;
-        pvt->funurl = strdup(_funurl);
+        pvt->funurl = switch_core_session_strdup(ses, _funurl);
         if ((status = switch_core_new_memory_pool(&pvt->pool)) != SWITCH_STATUS_SUCCESS) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Memory Error!\n");
-            goto lab_end;
+            switch_goto_status(SWITCH_STATUS_SUCCESS, unlock);
         }
         switch_mutex_init(&pvt->mutex, SWITCH_MUTEX_NESTED, pvt->pool);
         //session添加media bug
@@ -829,12 +848,17 @@ SWITCH_STANDARD_API(uuid_start_funasr_function) {
                 // SMBF_READ_REPLACE | SMBF_WRITE_REPLACE |  SMBF_NO_PAUSE | SMBF_ONE_ONLY,
                                                 SMBF_READ_STREAM | SMBF_NO_PAUSE,
                                                 &(pvt->bug))) != SWITCH_STATUS_SUCCESS) {
-            goto lab_end;
+            switch_goto_status(SWITCH_STATUS_SUCCESS, unlock);
         }
         switch_channel_set_private(channel, "asr", pvt);
+
+        if (switch_channel_add_state_handler(channel, &asr_cs_handlers ) < 0) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "hook cs state change failed!\n");
+        } // hook cs state change
+
         switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(ses), SWITCH_LOG_INFO, "%s Start ASR\n",
                           switch_channel_get_name(channel));
-        lab_end:
+unlock:
         // add rwunlock for BUG: un-released channel, ref: https://blog.csdn.net/xxm524/article/details/125821116
         //  We meet : ... Locked, Waiting on external entities
         switch_core_session_rwunlock(ses);
@@ -843,7 +867,9 @@ SWITCH_STANDARD_API(uuid_start_funasr_function) {
                           argv[0]);
     }
 
-    return SWITCH_STATUS_SUCCESS;
+end:
+    switch_core_destroy_memory_pool(&pool);
+    return status;
 }
 
 // uuid_stop_funasr <uuid>
@@ -853,6 +879,8 @@ SWITCH_STANDARD_API(uuid_stop_funasr_function) {
         return SWITCH_STATUS_SUCCESS;
     }
 
+    switch_status_t status = SWITCH_STATUS_SUCCESS;
+    switch_core_session_t *ses = NULL;
     switch_memory_pool_t *pool;
     switch_core_new_memory_pool(&pool);
     char *mycmd = switch_core_strdup(pool, cmd);
@@ -863,16 +891,23 @@ SWITCH_STANDARD_API(uuid_stop_funasr_function) {
 
     if (argc < 1) {
         stream->write_function(stream, "parameter number is invalid.\n");
-        return SWITCH_STATUS_SUCCESS;
+        switch_goto_status(SWITCH_STATUS_SUCCESS, end);
     }
 
-    switch_core_session_t *ses = switch_core_session_force_locate(argv[0]);
+    ses = switch_core_session_force_locate(argv[0]);
     if (ses) {
         switch_da_t *pvt;
         switch_channel_t *channel = switch_core_session_get_channel(ses);
         if ((pvt = (switch_da_t *) switch_channel_get_private(channel, "asr"))) {
             switch_channel_set_private(channel, "asr", NULL);
             switch_core_media_bug_remove(ses, &pvt->bug);
+
+            if (pvt->resampler) {
+                switch_resample_destroy(&pvt->resampler);
+            }
+            switch_mutex_destroy(pvt->mutex);
+            switch_core_destroy_memory_pool(&pvt->pool);
+
             switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(ses), SWITCH_LOG_DEBUG, "%s Stop ASR\n",
                               switch_channel_get_name(channel));
         }
@@ -885,70 +920,10 @@ SWITCH_STANDARD_API(uuid_stop_funasr_function) {
                           argv[0]);
     }
 
-    return SWITCH_STATUS_SUCCESS;
+end:
+    switch_core_destroy_memory_pool(&pool);
+    return status;
 }
-
-#if 0
-/**
- *  定义添加的函数
- *
- *  注意：App函数是自带session的，Api中是没有的
- *       App函数中没有stream用于控制台输出的流；Api中是有的
- *       App函数不需要返回值；Api中是有的
- */
-SWITCH_STANDARD_APP(start_asr_session_function)
-{
-    switch_channel_t *channel = switch_core_session_get_channel(session);
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Starting asr:%s\n", switch_channel_get_name(channel));
-    switch_status_t status;
-    switch_da_t *pvt;
-    switch_codec_implementation_t read_impl;
-    //memset是计算机中C/C++语言初始化函数。作用是将某一块内存中的内容全部设置为指定的值， 这个函数通常为新申请的内存做初始化工作。
-    memset(&read_impl, 0, sizeof(switch_codec_implementation_t));
-    //获取读媒体编码实现方法
-    switch_core_session_get_read_impl(session, &read_impl);
-    if (!(pvt = (switch_da_t*)switch_core_session_alloc(session, sizeof(switch_da_t))))
-    {
-        return;
-    }
-    pvt->started = 0;
-    pvt->stoped = 0;
-    pvt->starting = 0;
-    pvt->datalen = 0;
-    pvt->session = session;
-    if ((status = switch_core_new_memory_pool(&pvt->pool)) != SWITCH_STATUS_SUCCESS)
-    {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Memory Error!\n");
-        return;
-    }
-    switch_mutex_init(&pvt->mutex,SWITCH_MUTEX_NESTED,pvt->pool);
-    //session添加media bug
-    if ((status = switch_core_media_bug_add(session, "asr", NULL,
-            asr_callback, pvt, 0,
-            // SMBF_READ_REPLACE | SMBF_WRITE_REPLACE |  SMBF_NO_PAUSE | SMBF_ONE_ONLY,
-    SMBF_READ_STREAM | SMBF_NO_PAUSE,
-            &(pvt->bug))) != SWITCH_STATUS_SUCCESS)
-    {
-        return;
-    }
-    switch_channel_set_private(channel, "asr", pvt);
-    switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_INFO, "%s Start ASR\n", switch_channel_get_name(channel));
-}
-
-/**
- *  定义添加的函数
- */
-SWITCH_STANDARD_APP(stop_asr_session_function)
-{
-    switch_da_t *pvt;
-    switch_channel_t *channel = switch_core_session_get_channel(session);
-    if ((pvt = (switch_da_t*)switch_channel_get_private(channel, "asr"))) {
-        switch_channel_set_private(channel, "asr", NULL);
-        switch_core_media_bug_remove(session, &pvt->bug);
-        switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_DEBUG, "%s Stop ASR\n", switch_channel_get_name(channel));
-    }
-}
-#endif
 
 /**
  *  定义load函数，加载时运行
