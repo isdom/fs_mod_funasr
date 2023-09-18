@@ -639,7 +639,6 @@ static switch_bool_t asr_callback(switch_media_bug_t *bug, void *user_data, swit
                 //7: 识别结束, 释放request对象
                 delete pvt->fac;
                 pvt->fac = NULL;
-                // NlsClient::getInstance()->releaseTranscriberRequest(pvt->request);
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "asr released:%s\n",
                                   switch_channel_get_name(channel));
             }
@@ -694,7 +693,6 @@ static switch_bool_t asr_callback(switch_media_bug_t *bug, void *user_data, swit
                     pvt->fac->stop();
                     delete pvt->fac;
                     pvt->fac = NULL;
-                    // NlsClient::getInstance()->releaseTranscriberRequest(pvt->request);
                 }
 
                 if (g_debug) {
