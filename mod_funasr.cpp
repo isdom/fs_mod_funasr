@@ -36,6 +36,8 @@ typedef struct {
     switch_memory_pool_t *pool;
     switch_audio_resampler_t *resampler;
     char *funurl;
+    char *asr_dec_vol;
+    float vol_multiplier = 0.0f;
 } switch_da_t;
 
 /**
@@ -472,18 +474,18 @@ private:
 #define SAMPLE_RATE 16000
 
 bool g_debug = false;
-float g_vol_multiplier = 1.0f;
 
-funasr_client *generateAsrClient(AsrParamCallBack *cbParam) {
-    funasr_client *fac = new funasr_client(1, cbParam);
-    if (fac == NULL) {
+funasr_client *generateAsrClient(AsrParamCallBack *cbParam, switch_da_t *pvt) {
+    auto *fac = new funasr_client(1, cbParam);
+    if (!fac) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "generateAsrClient failed.\n");
         return NULL;
     }
 
     fac->m_client.set_tls_init_handler(bind(&OnTlsInit, ::_1));
 
-//    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "vol multiplier is:%f\n", g_asrurl.c_str(), g_vol_multiplier);
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "funasr url is:%s, vol multiplier is:%f\n",
+                      pvt->funurl, pvt->vol_multiplier);
     return fac;
 }
 
@@ -498,57 +500,10 @@ extern "C"
 SWITCH_MODULE_DEFINITION(mod_funasr, mod_funasr_load, mod_funasr_shutdown, NULL);
 };
 
-#if 0
-/**
- * 配置加载 aliyun的appkey，akid，aksecret
- *
- * @return switch_status_t 执行状态：
- */
-static switch_status_t load_config()
-{
-    const char *cf = "funasr.conf";
-    switch_xml_t cfg, xml, settings, param;
-    if (!(xml = switch_xml_open_cfg(cf, &cfg, NULL)))
-    {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Open of %s failed\n", cf);
-        switch_xml_free(xml);
-        return SWITCH_STATUS_TERM;
-    }
-    settings = switch_xml_child(cfg, "settings");
-    if (!settings)
-    {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "No settings in asr config\n");
-        switch_xml_free(xml);
-        return SWITCH_STATUS_TERM;
-    }
-    for (param = switch_xml_child(settings, "param"); param; param = param->next)
-    {
-        char *var = (char *) switch_xml_attr_soft(param, "name");
-        char *val = (char *) switch_xml_attr_soft(param, "value");
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Read conf: %s = %s\n", var, val);
-        //strcasecmp：忽略大小写比较字符串（二进制）
-        if (!strcasecmp(var, "debug"))
-        {
-            if (!strcasecmp(val, "true")) {
-                g_debug = true;
-            }
-            continue;
-        }
-        if (!strcasecmp(var, "newdb"))
-        {
-            double db = atof(val);
-            g_vol_multiplier = pow(10,db/20);
-            continue;
-        }
-    }
-    return SWITCH_STATUS_SUCCESS;
-}
-#endif
-
-void adjustVolume(int16_t *pcm, size_t pcmlen) {
+void adjustVolume(int16_t *pcm, size_t pcmlen, float vol_multiplier) {
     int32_t pcmval;
     for (size_t ctr = 0; ctr < pcmlen; ctr++) {
-        pcmval = pcm[ctr] * g_vol_multiplier;
+        pcmval = pcm[ctr] * vol_multiplier;
         if (pcmval < 32767 && pcmval > -32768) {
             pcm[ctr] = pcmval;
         } else if (pcmval > 32767) {
@@ -595,7 +550,7 @@ static switch_bool_t asr_callback(switch_media_bug_t *bug, void *user_data, swit
                     switch_caller_profile_t *profile = switch_channel_get_caller_profile(channel);
                     cbParam->caller = profile->caller_id_number;
                     cbParam->callee = profile->callee_id_number;
-                    funasr_client *fac = generateAsrClient(cbParam);
+                    funasr_client *fac = generateAsrClient(cbParam, pvt);
                     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Caller %s. Callee %s\n",
                                       cbParam->caller.c_str(), cbParam->callee.c_str());
                     if (fac == NULL) {
@@ -678,12 +633,11 @@ static switch_bool_t asr_callback(switch_media_bug_t *bug, void *user_data, swit
                         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "ASR new samples:%d\n", samples);
                     }
                 }
-//                if (g_vol_multiplier != 1.0f) {
-//                    adjustVolume((int16_t*)dp, (size_t)datalen / 2);
-//                }
+                if (pvt->asr_dec_vol) {
+                    adjustVolume((int16_t*)dp, (size_t)datalen / 2, pvt->vol_multiplier);
+                }
 
                 websocketpp::lib::error_code ec;
-
                 pvt->fac->sendAudio((uint8_t *) dp, (size_t) datalen, ec);
 
                 if (ec) {
@@ -785,6 +739,7 @@ SWITCH_STANDARD_API(uuid_start_funasr_function) {
     switch_status_t status = SWITCH_STATUS_SUCCESS;
     switch_core_session_t *ses = NULL;
     char *_funurl = NULL;
+    char *_asr_dec_vol = NULL;
 
     switch_memory_pool_t *pool;
     switch_core_new_memory_pool(&pool);
@@ -814,6 +769,10 @@ SWITCH_STANDARD_API(uuid_start_funasr_function) {
                     _funurl = val;
                     continue;
                 }
+                if (!strcasecmp(var, "asr_dec_vol")) {
+                    _asr_dec_vol = val;
+                    continue;
+                }
             }
         }
     }
@@ -839,6 +798,11 @@ SWITCH_STANDARD_API(uuid_start_funasr_function) {
         pvt->datalen = 0;
         pvt->session = ses;
         pvt->funurl = switch_core_session_strdup(ses, _funurl);
+        pvt->asr_dec_vol = _asr_dec_vol ? switch_core_session_strdup(ses, _asr_dec_vol) : NULL;
+        if (pvt->asr_dec_vol) {
+            double db = atof(pvt->asr_dec_vol);
+            pvt->vol_multiplier = pow(10,db/20);
+        }
         if ((status = switch_core_new_memory_pool(&pvt->pool)) != SWITCH_STATUS_SUCCESS) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Memory Error!\n");
             switch_goto_status(SWITCH_STATUS_SUCCESS, unlock);
