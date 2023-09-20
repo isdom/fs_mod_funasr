@@ -65,7 +65,7 @@ void onAsrTranscriptionStarted(AsrParamCallBack *cbParam) {
         if (switch_event_create(&event, SWITCH_EVENT_CUSTOM) == SWITCH_STATUS_SUCCESS) {
             event->subclass_name = strdup("begin_asr");
             switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Event-Subclass", event->subclass_name);
-            switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Unique-ID", tmpParam->sUUID);
+            switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Unique-ID", cbParam->sUUID);
             switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Channel", switch_channel_get_name(channel));
             switch_event_fire(&event);
         }
