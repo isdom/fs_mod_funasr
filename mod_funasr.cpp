@@ -34,9 +34,9 @@ typedef struct {
     int datalen;
     switch_mutex_t *mutex;
     switch_memory_pool_t *pool;
-    switch_audio_resampler_t *resampler;
-    char *funurl;
-    char *asr_dec_vol;
+    switch_audio_resampler_t *resampler = NULL;
+    char *funurl = NULL;
+    char *asr_dec_vol = NULL;
     float vol_multiplier = 0.0f;
 } switch_da_t;
 
@@ -792,7 +792,6 @@ SWITCH_STANDARD_API(uuid_start_funasr_function) {
         if (!(pvt = (switch_da_t *) switch_core_session_alloc(ses, sizeof(switch_da_t)))) {
             switch_goto_status(SWITCH_STATUS_SUCCESS, unlock);
         }
-        // memset(pvt, 0, sizeof(switch_da_t));
         pvt->started = 0;
         pvt->stoped = 0;
         pvt->starting = 0;
