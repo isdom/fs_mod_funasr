@@ -74,7 +74,6 @@ void onAsrTranscriptionStarted(asr_callback_t *asr_callback) {
 /**
  * @brief 一句话开始回调函数
  *
- * @param cbEvent
  * @param asr_callback
  */
 void onAsrSentenceBegin(asr_callback_t *asr_callback) {
@@ -247,8 +246,8 @@ public:
     // wss_client;
     typedef websocketpp::lib::lock_guard<websocketpp::lib::mutex> scoped_lock;
 
-    WebsocketClient(int is_ssl, asr_callback_t *cbParam) : m_open(false), m_done(false) {
-        m_cbParam = cbParam;
+    WebsocketClient(int is_ssl, asr_callback_t *asr_callback) : m_open(false), m_done(false) {
+        m_asr_callback = asr_callback;
 
         // set up access channels to only log interesting things
         m_client.clear_access_channels(websocketpp::log::alevel::all);
@@ -291,9 +290,9 @@ public:
                                   payload.c_str());
 
                 if (asrresult["mode"] == "2pass-online") {
-                    onAsrTranscriptionResultChanged(m_cbParam, asrresult["text"]);
+                    onAsrTranscriptionResultChanged(m_asr_callback, asrresult["text"]);
                 } else if (asrresult["mode"] == "2pass-offline") {
-                    onAsrSentenceEnd(m_cbParam, asrresult["text"]);
+                    onAsrSentenceEnd(m_asr_callback, asrresult["text"]);
                 }
 
                 if (asrresult["is_final"] == true) {
@@ -408,7 +407,7 @@ public:
         m_client.stop_perpetual();
         m_thread->join();
 
-        onAsrChannelClosed(m_cbParam);
+        onAsrChannelClosed(m_asr_callback);
     }
 
     // The open handler will signal that we are ready to start sending data
@@ -419,7 +418,7 @@ public:
             scoped_lock guard(m_lock);
             m_open = true;
         }
-        onAsrTranscriptionStarted(m_cbParam);
+        onAsrTranscriptionStarted(m_asr_callback);
     }
 
     // The close handler will signal that we should stop sending data
@@ -430,7 +429,7 @@ public:
             scoped_lock guard(m_lock);
             m_done = true;
         }
-        onAsrTranscriptionCompleted(m_cbParam);
+        onAsrTranscriptionCompleted(m_asr_callback);
     }
 
     // The fail handler will signal that we should stop sending data
@@ -441,7 +440,7 @@ public:
             scoped_lock guard(m_lock);
             m_done = true;
         }
-        onAsrTaskFailed(m_cbParam);
+        onAsrTaskFailed(m_asr_callback);
     }
 
     void sendAudio(uint8_t *dp, size_t datalen, websocketpp::lib::error_code &ec) {
@@ -453,7 +452,7 @@ public:
 
 private:
 
-    asr_callback_t *m_cbParam;
+    asr_callback_t *m_asr_callback;
     websocketpp::connection_hdl m_hdl;
     websocketpp::lib::mutex m_lock;
     bool m_open;
@@ -870,13 +869,16 @@ static void *funasr_init(switch_core_session_t *session, const switch_codec_impl
         if (switch_resample_create(&pvt->re_sampler,
                                    read_impl->actual_samples_per_second,
                                    SAMPLE_RATE,
-                                   8 * (read_impl->microseconds_per_packet / 1000) * 2,
+                                   16 * (read_impl->microseconds_per_packet / 1000) * 2,
                                    SWITCH_RESAMPLE_QUALITY,
                                    1) != SWITCH_STATUS_SUCCESS) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Unable to allocate re_sampler\n");
             pvt = nullptr;
             goto end;
         }
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT,
+                          "create re-sampler bcs of media sampler/s is %d but fun asr support: %d, while ms/p: %d\n",
+                          read_impl->actual_samples_per_second, SAMPLE_RATE, read_impl->microseconds_per_packet);
     }
 
     end:
