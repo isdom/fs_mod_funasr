@@ -309,7 +309,7 @@ public:
             }
                 break;
             default:
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "un-handle opcode: %s\n", msg->get_opcode());
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "un-handle opcode: %d\n", msg->get_opcode());
                 break;
         }
     }
