@@ -793,7 +793,7 @@ switch_state_handler_table_t session_asr_handlers = {
 };
 
 // uuid_start_funasr <uuid> funurl=<uri>
-#define MAX_API_ARGC 3
+#define MAX_API_ARGC 10
 
 static void *funasr_init(switch_core_session_t *session, const switch_codec_implementation_t *read_impl, const char *cmd) {
     char *_fun_url = nullptr;
