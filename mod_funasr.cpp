@@ -862,7 +862,7 @@ static void *init_fun_asr(switch_core_session_t *session, const switch_codec_imp
         return nullptr;
     }
 
-    switch_channel_t *channel = switch_core_session_get_channel(session);
+    // switch_channel_t *channel = switch_core_session_get_channel(session);
     fun_asr_context_t *pvt;
     if (!(pvt = (fun_asr_context_t *) switch_core_session_alloc(session, sizeof(fun_asr_context_t)))) {
         goto end;
