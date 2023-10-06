@@ -1,7 +1,6 @@
 #include <switch.h>
 #include <fstream>
 #include <math.h>
-#include <sys/time.h>
 
 #define ASIO_STANDALONE 1
 
@@ -17,57 +16,70 @@ class WebsocketClient;
 
 typedef WebsocketClient<websocketpp::config::asio_tls_client> funasr_client;
 
+#if 0
 typedef struct {
     char *caller;
     char *callee;
     char *unique_id;
 } asr_callback_t;
+#endif
+
+typedef void (*on_asr_started_func_t) (void *);
+typedef void (*on_asr_sentence_func_t) (void *, const char *sentence);
+typedef void (*on_asr_result_changed_func_t) (void *, const char *result);
+typedef void (*on_asr_stopped_func_t) (void *);
+
+typedef struct {
+    void *asr_caller;
+    on_asr_started_func_t on_asr_started_func;
+    on_asr_sentence_func_t on_asr_sentence_func;
+    on_asr_result_changed_func_t on_asr_result_changed_func;
+    on_asr_stopped_func_t on_asr_stopped_func;
+} asr_callback_t;
+
+typedef void *(*asr_init_func_t) (switch_core_session_t *, const switch_codec_implementation_t *, const char *);
+typedef bool (*asr_start_func_t) (void *asr_data, asr_callback_t *asr_callback);
+typedef bool (*asr_send_audio_func_t) (void *asr_data, void *data, uint32_t data_len);
+typedef void (*asr_stop_func_t) (void *asr_data);
+typedef void (*asr_destroy_func_t) (void *asr_data);
+
+typedef struct {
+    asr_init_func_t asr_init_func;
+    asr_start_func_t asr_start_func;
+    asr_send_audio_func_t asr_send_audio_func;
+    asr_stop_func_t asr_stop_func;
+    asr_destroy_func_t asr_destroy_func;
+} asr_provider_t;
 
 typedef struct {
     switch_core_session_t *session;
-    switch_media_bug_t *bug;
     funasr_client *fac;
     int started;
     int stopped;
     int starting;
-    int data_len;
     switch_mutex_t *mutex;
-    switch_memory_pool_t *pool;
     switch_audio_resampler_t *re_sampler;
     char *fun_url;
     char *asr_dec_vol;
     float vol_multiplier;
-} switch_da_t;
+    asr_callback_t *asr_callback;
+} fun_asr_context_t;
 
 /**
  * 识别启动回调函数
  *
  * @param asr_callback
  */
-void onAsrTranscriptionStarted(asr_callback_t *asr_callback) {
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrTranscriptionStarted: %s\n", asr_callback->unique_id);
-    switch_da_t *pvt;
-    switch_core_session_t *ses = switch_core_session_force_locate(asr_callback->unique_id);
-    if (ses) {
-        switch_channel_t *channel = switch_core_session_get_channel(ses);
-        if ((pvt = (switch_da_t *) switch_channel_get_private(channel, "asr"))) {
-            switch_mutex_lock(pvt->mutex);
-            pvt->started = 1;
-            pvt->starting = 0;
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "I need lock!!!!!!!!!!!! \n");
-            switch_mutex_unlock(pvt->mutex);
-        }
-        switch_event_t *event = nullptr;
-        if (switch_event_create(&event, SWITCH_EVENT_CUSTOM) == SWITCH_STATUS_SUCCESS) {
-            event->subclass_name = strdup("begin_asr");
-            switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Event-Subclass", event->subclass_name);
-            switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Unique-ID", asr_callback->unique_id);
-            switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Channel", switch_channel_get_name(channel));
-            switch_event_fire(&event);
-        }
-        // add rwunlock for BUG: un-released channel, ref: https://blog.csdn.net/xxm524/article/details/125821116
-        //  We meet : ... Locked, Waiting on external entities
-        switch_core_session_rwunlock(ses);
+void onAsrTranscriptionStarted(fun_asr_context_t *pvt) {
+    // switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrTranscriptionStarted: %s\n", asr_callback->unique_id);
+    switch_mutex_lock(pvt->mutex);
+    pvt->started = 1;
+    pvt->starting = 0;
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "I need lock!!!!!!!!!!!! \n");
+    switch_mutex_unlock(pvt->mutex);
+
+    if (pvt->asr_callback) {
+        pvt->asr_callback->on_asr_started_func(pvt->asr_callback->asr_caller);
     }
 }
 
@@ -76,8 +88,8 @@ void onAsrTranscriptionStarted(asr_callback_t *asr_callback) {
  *
  * @param asr_callback
  */
-void onAsrSentenceBegin(asr_callback_t *asr_callback) {
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrSentenceBegin: %s\n", asr_callback->unique_id);
+void onAsrSentenceBegin(fun_asr_context_t *pvt) {
+    // switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrSentenceBegin: %s\n", asr_callback->unique_id);
 //    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE,"onAsrSentenceBegin: status code=%d, task id=%s, index=%d, time=%d\n", cbEvent->getStatusCode(), cbEvent->getTaskId(),
 //                    cbEvent->getSentenceIndex(),
 //                    cbEvent->getSentenceTime());
@@ -88,8 +100,12 @@ void onAsrSentenceBegin(asr_callback_t *asr_callback) {
  *
  * @param asr_callback
  */
-void onAsrSentenceEnd(asr_callback_t *asr_callback, const std::string &text) {
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrSentenceEnd: %s\n", asr_callback->unique_id);
+void onAsrSentenceEnd(fun_asr_context_t *pvt, const std::string &text) {
+    // switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrSentenceEnd: %s\n", asr_callback->unique_id);
+    if (pvt->asr_callback) {
+        pvt->asr_callback->on_asr_sentence_func(pvt->asr_callback->asr_caller, text.c_str());
+    }
+#if 0
     switch_event_t *event = nullptr;
     switch_core_session_t *ses = switch_core_session_force_locate(asr_callback->unique_id);
     if (ses) {
@@ -110,6 +126,7 @@ void onAsrSentenceEnd(asr_callback_t *asr_callback, const std::string &text) {
         //  We meet : ... Locked, Waiting on external entities
         switch_core_session_rwunlock(ses);
     }
+#endif
 }
 
 /**
@@ -117,8 +134,12 @@ void onAsrSentenceEnd(asr_callback_t *asr_callback, const std::string &text) {
  *
  * @param asr_callback
  */
-void onAsrTranscriptionResultChanged(asr_callback_t *asr_callback, const std::string &text) {
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrTranscriptionResultChanged: %s\n", asr_callback->unique_id);
+void onAsrTranscriptionResultChanged(fun_asr_context_t *pvt, const std::string &text) {
+    // switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrTranscriptionResultChanged: %s\n", asr_callback->unique_id);
+    if (pvt->asr_callback) {
+        pvt->asr_callback->on_asr_result_changed_func(pvt->asr_callback->asr_caller, text.c_str());
+    }
+#if 0
     switch_event_t *event = nullptr;
     switch_core_session_t *ses = switch_core_session_force_locate(asr_callback->unique_id);
     if (ses) {
@@ -137,6 +158,7 @@ void onAsrTranscriptionResultChanged(asr_callback_t *asr_callback, const std::st
         //  We meet : ... Locked, Waiting on external entities
         switch_core_session_rwunlock(ses);
     }
+#endif
 }
 
 /**
@@ -144,13 +166,14 @@ void onAsrTranscriptionResultChanged(asr_callback_t *asr_callback, const std::st
  *
  * @param asr_callback
  */
-void onAsrTranscriptionCompleted(asr_callback_t *asr_callback) {
+void onAsrTranscriptionCompleted(fun_asr_context_t *pvt) {
+#if 0
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrTranscriptionCompleted: %s\n", asr_callback->unique_id);
-    switch_da_t *pvt;
+    fun_asr_context_t *pvt;
     switch_core_session_t *ses = switch_core_session_force_locate(asr_callback->unique_id);
     if (ses) {
         switch_channel_t *channel = switch_core_session_get_channel(ses);
-        if ((pvt = (switch_da_t *) switch_channel_get_private(channel, "asr"))) {
+        if ((pvt = (fun_asr_context_t *) switch_channel_get_private(channel, "asr"))) {
             //        if(pvt->frameDataBuffer){
             //            free(pvt->frameDataBuffer);
             //        }
@@ -159,6 +182,7 @@ void onAsrTranscriptionCompleted(asr_callback_t *asr_callback) {
         //  We meet : ... Locked, Waiting on external entities
         switch_core_session_rwunlock(ses);
     }
+#endif
 }
 
 /**
@@ -166,13 +190,17 @@ void onAsrTranscriptionCompleted(asr_callback_t *asr_callback) {
  *
  * @param asr_callback
  */
-void onAsrTaskFailed(asr_callback_t *asr_callback) {
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrTaskFailed: %s\n", asr_callback->unique_id);
-    switch_da_t *pvt;
+void onAsrTaskFailed(fun_asr_context_t *pvt) {
+    // switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrTaskFailed: %s\n", asr_callback->unique_id);
+    switch_mutex_lock(pvt->mutex);
+    pvt->started = 0;
+    switch_mutex_unlock(pvt->mutex);
+#if 0
+    fun_asr_context_t *pvt;
     switch_core_session_t *ses = switch_core_session_force_locate(asr_callback->unique_id);
     if (ses) {
         switch_channel_t *channel = switch_core_session_get_channel(ses);
-        if ((pvt = (switch_da_t *) switch_channel_get_private(channel, "asr"))) {
+        if ((pvt = (fun_asr_context_t *) switch_channel_get_private(channel, "asr"))) {
             switch_mutex_lock(pvt->mutex);
             pvt->started = 0;
             switch_mutex_unlock(pvt->mutex);
@@ -181,6 +209,7 @@ void onAsrTaskFailed(asr_callback_t *asr_callback) {
         //  We meet : ... Locked, Waiting on external entities
         switch_core_session_rwunlock(ses);
     }
+#endif
 }
 
 /**
@@ -188,8 +217,12 @@ void onAsrTaskFailed(asr_callback_t *asr_callback) {
  *
  * @param asr_callback
  */
-void onAsrChannelClosed(asr_callback_t *asr_callback) {
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrChannelClosed: %s\n", asr_callback->unique_id);
+void onAsrChannelClosed(fun_asr_context_t *pvt) {
+    // switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrChannelClosed: %s\n", asr_callback->unique_id);
+    if (pvt->asr_callback) {
+        pvt->asr_callback->on_asr_stopped_func(pvt->asr_callback->asr_caller);
+    }
+#if 0
     switch_event_t *event = nullptr;
     if (switch_event_create(&event, SWITCH_EVENT_CUSTOM) == SWITCH_STATUS_SUCCESS) {
         event->subclass_name = strdup("stop_asr");
@@ -202,6 +235,7 @@ void onAsrChannelClosed(asr_callback_t *asr_callback) {
     switch_safe_free(asr_callback->caller);
     switch_safe_free(asr_callback->unique_id);
     switch_safe_free(asr_callback);
+#endif
 }
 
 /**
@@ -246,8 +280,8 @@ public:
     // wss_client;
     typedef websocketpp::lib::lock_guard<websocketpp::lib::mutex> scoped_lock;
 
-    WebsocketClient(int is_ssl, asr_callback_t *asr_callback) : m_open(false), m_done(false) {
-        m_asr_callback = asr_callback;
+    WebsocketClient(int is_ssl, fun_asr_context_t *asr_context) : m_open(false), m_done(false) {
+        m_asr_context = asr_context;
 
         // set up access channels to only log interesting things
         m_client.clear_access_channels(websocketpp::log::alevel::all);
@@ -290,9 +324,9 @@ public:
                                   payload.c_str());
 
                 if (asrresult["mode"] == "2pass-online") {
-                    onAsrTranscriptionResultChanged(m_asr_callback, asrresult["text"]);
+                    onAsrTranscriptionResultChanged(m_asr_context, asrresult["text"]);
                 } else if (asrresult["mode"] == "2pass-offline") {
-                    onAsrSentenceEnd(m_asr_callback, asrresult["text"]);
+                    onAsrSentenceEnd(m_asr_context, asrresult["text"]);
                 }
 
                 if (asrresult["is_final"] == true) {
@@ -407,7 +441,7 @@ public:
         m_client.stop_perpetual();
         m_thread->join();
 
-        onAsrChannelClosed(m_asr_callback);
+        onAsrChannelClosed(m_asr_context);
     }
 
     // The open handler will signal that we are ready to start sending data
@@ -418,7 +452,7 @@ public:
             scoped_lock guard(m_lock);
             m_open = true;
         }
-        onAsrTranscriptionStarted(m_asr_callback);
+        onAsrTranscriptionStarted(m_asr_context);
     }
 
     // The close handler will signal that we should stop sending data
@@ -429,7 +463,7 @@ public:
             scoped_lock guard(m_lock);
             m_done = true;
         }
-        onAsrTranscriptionCompleted(m_asr_callback);
+        onAsrTranscriptionCompleted(m_asr_context);
     }
 
     // The fail handler will signal that we should stop sending data
@@ -440,7 +474,7 @@ public:
             scoped_lock guard(m_lock);
             m_done = true;
         }
-        onAsrTaskFailed(m_asr_callback);
+        onAsrTaskFailed(m_asr_context);
     }
 
     void sendAudio(uint8_t *dp, size_t datalen, websocketpp::lib::error_code &ec) {
@@ -452,7 +486,7 @@ public:
 
 private:
 
-    asr_callback_t *m_asr_callback;
+    fun_asr_context_t *m_asr_context;
     websocketpp::connection_hdl m_hdl;
     websocketpp::lib::mutex m_lock;
     bool m_open;
@@ -466,8 +500,8 @@ private:
 
 bool g_debug = false;
 
-funasr_client *generateAsrClient(asr_callback_t *asr_callback, switch_da_t *pvt) {
-    auto *fac = new funasr_client(1, asr_callback);
+funasr_client *generateAsrClient(/*asr_callback_t *asr_callback, */fun_asr_context_t *pvt) {
+    auto *fac = new funasr_client(1, pvt);
     if (!fac) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "generateAsrClient failed.\n");
         return nullptr;
@@ -491,31 +525,22 @@ extern "C"
 SWITCH_MODULE_DEFINITION(mod_funasr, mod_funasr_load, mod_funasr_shutdown, NULL);
 };
 
-typedef void *(*asr_init_func_t) (switch_core_session_t *, const switch_codec_implementation_t *, const char *);
-typedef bool (*asr_start_func_t) (void *asr_data);
-typedef bool (*asr_send_audio_func_t) (void *asr_data, void *data, uint32_t data_len);
-typedef void (*asr_stop_func_t) (void *asr_data);
+static void *init_fun_asr(switch_core_session_t *session, const switch_codec_implementation_t *read_impl, const char *cmd);
 
-typedef struct {
-    asr_init_func_t asr_init_func;
-    asr_start_func_t asr_start_func;
-    asr_send_audio_func_t asr_send_audio_func;
-    asr_stop_func_t asr_stop_func;
-} asr_provider_t;
+static bool start_fun_asr(fun_asr_context_t *pvt, asr_callback_t *asr_callback);
 
-static void *funasr_init(switch_core_session_t *session, const switch_codec_implementation_t *read_impl, const char *cmd);
+static bool send_audio_to_fun_asr(fun_asr_context_t *pvt, void *data, uint32_t data_len);
 
-static bool funasr_start(switch_da_t *pvt);
+static void stop_fun_asr(fun_asr_context_t *pvt);
 
-static bool funasr_send_audio(switch_da_t *pvt, void *data, uint32_t data_len);
-
-static void funasr_stop(switch_da_t *pvt);
+static void destroy_fun_asr(fun_asr_context_t *pvt);
 
 static const asr_provider_t g_funcs = {
-        funasr_init,
-        reinterpret_cast<asr_start_func_t>(funasr_start),
-        reinterpret_cast<asr_send_audio_func_t>(funasr_send_audio),
-        reinterpret_cast<asr_stop_func_t>(funasr_stop)
+        init_fun_asr,
+        reinterpret_cast<asr_start_func_t>(start_fun_asr),
+        reinterpret_cast<asr_send_audio_func_t>(send_audio_to_fun_asr),
+        reinterpret_cast<asr_stop_func_t>(stop_fun_asr),
+        reinterpret_cast<asr_destroy_func_t>(destroy_fun_asr)
 };
 
 static switch_status_t on_channel_init(switch_core_session_t *session) {
@@ -579,6 +604,7 @@ void adjustVolume(int16_t *pcm, size_t pcm_len, float vol_multiplier) {
     }
 }
 
+#if 0
 /**
  * asr 回调处理
  *
@@ -588,7 +614,7 @@ void adjustVolume(int16_t *pcm, size_t pcm_len, float vol_multiplier) {
  * @return switch_bool_t
  */
 static switch_bool_t asr_callback(switch_media_bug_t *bug, void *user_data, switch_abc_type_t type) {
-    auto *pvt = (switch_da_t *) user_data;
+    auto *pvt = (fun_asr_context_t *) user_data;
     switch_channel_t *channel = switch_core_session_get_channel(pvt->session);
 
     switch (type) {
@@ -731,12 +757,12 @@ static switch_bool_t asr_callback(switch_media_bug_t *bug, void *user_data, swit
 }
 
 switch_status_t on_channel_destroy(switch_core_session_t *session) {
-    switch_da_t *pvt;
+    fun_asr_context_t *pvt;
     switch_channel_t *channel = switch_core_session_get_channel(session);
     switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_NOTICE, "%s on_destroy, release all resource for session\n",
                       switch_channel_get_name(channel));
 
-    if ((pvt = (switch_da_t *) switch_channel_get_private(channel, "asr"))) {
+    if ((pvt = (fun_asr_context_t *) switch_channel_get_private(channel, "asr"))) {
         switch_channel_set_private(channel, "asr", nullptr);
         if (pvt->re_sampler) {
             switch_resample_destroy(&pvt->re_sampler);
@@ -791,11 +817,12 @@ switch_state_handler_table_t session_asr_handlers = {
         // int flags;
         0
 };
+#endif
 
 // uuid_start_funasr <uuid> funurl=<uri>
 #define MAX_API_ARGC 10
 
-static void *funasr_init(switch_core_session_t *session, const switch_codec_implementation_t *read_impl, const char *cmd) {
+static void *init_fun_asr(switch_core_session_t *session, const switch_codec_implementation_t *read_impl, const char *cmd) {
     char *_fun_url = nullptr;
     char *_asr_dec_vol = nullptr;
 
@@ -836,14 +863,13 @@ static void *funasr_init(switch_core_session_t *session, const switch_codec_impl
     }
 
     switch_channel_t *channel = switch_core_session_get_channel(session);
-    switch_da_t *pvt;
-    if (!(pvt = (switch_da_t *) switch_core_session_alloc(session, sizeof(switch_da_t)))) {
+    fun_asr_context_t *pvt;
+    if (!(pvt = (fun_asr_context_t *) switch_core_session_alloc(session, sizeof(fun_asr_context_t)))) {
         goto end;
     }
     pvt->started = 0;
     pvt->stopped = 0;
     pvt->starting = 0;
-    pvt->data_len = 0;
     pvt->session = session;
     pvt->fun_url = switch_core_session_strdup(session, _fun_url);
     pvt->asr_dec_vol = _asr_dec_vol ? switch_core_session_strdup(session, _asr_dec_vol) : nullptr;
@@ -851,20 +877,8 @@ static void *funasr_init(switch_core_session_t *session, const switch_codec_impl
         double db = atof(pvt->asr_dec_vol);
         pvt->vol_multiplier = pow(10, db / 20);
     }
-    if (switch_core_new_memory_pool(&pvt->pool) != SWITCH_STATUS_SUCCESS) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Memory Error!\n");
-        pvt = nullptr;
-        goto end;
-    }
-    switch_mutex_init(&pvt->mutex, SWITCH_MUTEX_NESTED, pvt->pool);
-    switch_channel_set_private(channel, "asr", pvt);
+    switch_mutex_init(&pvt->mutex, SWITCH_MUTEX_NESTED, switch_core_session_get_pool(session));
 
-    // hook cs state change
-    if (switch_channel_add_state_handler(channel, &session_asr_handlers) < 0) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "hook channel state change failed!\n");
-        pvt = nullptr;
-        goto end;
-    }
     if (read_impl->actual_samples_per_second != SAMPLE_RATE) {
         if (switch_resample_create(&pvt->re_sampler,
                                    read_impl->actual_samples_per_second,
@@ -872,6 +886,9 @@ static void *funasr_init(switch_core_session_t *session, const switch_codec_impl
                                    16 * (read_impl->microseconds_per_packet / 1000) * 2,
                                    SWITCH_RESAMPLE_QUALITY,
                                    1) != SWITCH_STATUS_SUCCESS) {
+            // release all resource alloc before
+            switch_mutex_destroy(pvt->mutex);
+
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Unable to allocate re_sampler\n");
             pvt = nullptr;
             goto end;
@@ -886,7 +903,7 @@ static void *funasr_init(switch_core_session_t *session, const switch_codec_impl
     return pvt;
 }
 
-static bool funasr_start(switch_da_t *pvt) {
+static bool start_fun_asr(fun_asr_context_t *pvt, asr_callback_t *asr_callback) {
     bool  ret_val = false;
     switch_mutex_lock(pvt->mutex);
     if (pvt->started == 0) {
@@ -894,6 +911,8 @@ static bool funasr_start(switch_da_t *pvt) {
             pvt->starting = 1;
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Starting Transaction \n");
             switch_channel_t *channel = switch_core_session_get_channel(pvt->session);
+            pvt->asr_callback = asr_callback;
+#if 0
             auto asr_callback = (asr_callback_t*)malloc(sizeof(asr_callback_t));
             asr_callback->unique_id = strdup(switch_channel_get_uuid(channel));
             switch_caller_profile_t *profile = switch_channel_get_caller_profile(channel);
@@ -902,6 +921,8 @@ static bool funasr_start(switch_da_t *pvt) {
             funasr_client *fac = generateAsrClient(asr_callback, pvt);
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Caller %s. Callee %s\n",
                               asr_callback->caller, asr_callback->callee);
+#endif
+            funasr_client *fac = generateAsrClient(pvt);
             if (!fac) {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Asr Client init failed.%s\n",
                                   switch_channel_get_name(channel));
@@ -925,7 +946,6 @@ static bool funasr_start(switch_da_t *pvt) {
                 pvt->fac->stop();
                 delete pvt->fac;
                 pvt->fac = nullptr;
-                // NlsClient::getInstance()->releaseTranscriberRequest(pvt->request);
                 // start()失败，释放request对象
                 ret_val = false;
                 goto unlock;
@@ -939,41 +959,50 @@ static bool funasr_start(switch_da_t *pvt) {
     return ret_val;
 }
 
-static bool funasr_send_audio(switch_da_t *pvt, void *data, uint32_t data_len) {
+static bool send_audio_to_fun_asr(fun_asr_context_t *pvt, void *data, uint32_t data_len) {
     bool  ret_val = false;
     // send audio to asr
     switch_mutex_lock(pvt->mutex);
-    if (pvt->re_sampler) {
-        //====== resample ==== ///
-        switch_resample_process(pvt->re_sampler, (int16_t *)data, (int) data_len / 2 / 1);
-        memcpy(data, pvt->re_sampler->to, pvt->re_sampler->to_len * 2 * 1);
-        data_len = pvt->re_sampler->to_len * 2 * 1;
-        if (g_debug) {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "ASR new samples:%d\n", pvt->re_sampler->to_len);
+
+    if (pvt->fac) {
+        if (pvt->re_sampler) {
+            //====== resample ==== ///
+            switch_resample_process(pvt->re_sampler, (int16_t *) data, (int) data_len / 2 / 1);
+            memcpy(data, pvt->re_sampler->to, pvt->re_sampler->to_len * 2 * 1);
+            data_len = pvt->re_sampler->to_len * 2 * 1;
+            if (g_debug) {
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "ASR new samples:%d\n",
+                                  pvt->re_sampler->to_len);
+            }
         }
-    }
-    if (pvt->asr_dec_vol) {
-        adjustVolume((int16_t *) data, (size_t) data_len / 2, pvt->vol_multiplier);
-    }
+        if (pvt->asr_dec_vol) {
+            adjustVolume((int16_t *) data, (size_t) data_len / 2, pvt->vol_multiplier);
+        }
 
-    websocketpp::lib::error_code ec;
-    pvt->fac->sendAudio((uint8_t *) data, (size_t) data_len, ec);
+        websocketpp::lib::error_code ec;
+        pvt->fac->sendAudio((uint8_t *) data, (size_t) data_len, ec);
 
-    if (ec) {
-        pvt->stopped = 1;
+        if (ec) {
+            pvt->stopped = 1;
+            switch_channel_t *channel = switch_core_session_get_channel(pvt->session);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "send audio failed: %s -> on channel: %s\n",
+                              ec.message().c_str(), switch_channel_get_name(channel));
+            pvt->fac->stop();
+            delete pvt->fac;
+            pvt->fac = nullptr;
+            ret_val = false;
+            goto unlock;
+        }
+        ret_val = true;
+        if (g_debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "send_audio_to_fun_asr: send audio %d\n",
+                              data_len);
+        }
+    } else {
         switch_channel_t *channel = switch_core_session_get_channel(pvt->session);
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Send Audio Error: %s, channel %s\n",
-                          ec.message().c_str(), switch_channel_get_name(channel));
-        pvt->fac->stop();
-        delete pvt->fac;
-        pvt->fac = nullptr;
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "try send audio but fac has been released -> on channel: %s\n",
+                          switch_channel_get_name(channel));
         ret_val = false;
-        goto unlock;
-    }
-    ret_val = true;
-    if (g_debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "funasr_send_audio: send audio %d\n",
-                          data_len);
     }
 
     unlock:
@@ -981,22 +1010,51 @@ static bool funasr_send_audio(switch_da_t *pvt, void *data, uint32_t data_len) {
     return ret_val;
 }
 
-static void funasr_stop(switch_da_t *pvt) {
+static void stop_fun_asr(fun_asr_context_t *pvt) {
+    switch_mutex_lock(pvt->mutex);
+    switch_channel_t *channel = switch_core_session_get_channel(pvt->session);
     if (pvt->fac) {
         switch_channel_t *channel = switch_core_session_get_channel(pvt->session);
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "ASR Stop Succeed channel: %s\n",
                           switch_channel_get_name(channel));
         pvt->fac->stop();
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "asr stopped:%s\n",
-                          switch_channel_get_name(channel));
         //7: 识别结束, 释放fac对象
         delete pvt->fac;
         pvt->fac = nullptr;
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "asr released:%s\n",
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "stop fun asr and fac is released on channel: %s\n",
+                          switch_channel_get_name(channel));
+    } else {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "fun asr has already stopped and released on channel:%s\n",
                           switch_channel_get_name(channel));
     }
+    switch_mutex_unlock(pvt->mutex);
 }
 
+static void destroy_fun_asr(fun_asr_context_t *pvt) {
+    switch_core_session_t *session = pvt->session;
+    switch_channel_t *channel = switch_core_session_get_channel(session);
+    switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(pvt->session), SWITCH_LOG_NOTICE,
+                      "destroy_fun_asr: release all resource for session -> on channel: %s\n",
+                      switch_channel_get_name(channel));
+
+    stop_fun_asr(pvt);
+    switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_NOTICE,
+                      "destroy_fun_asr: stop_fun_asr -> channel: %s\n",
+                      switch_channel_get_name(channel));
+
+    if (pvt->re_sampler) {
+        switch_resample_destroy(&pvt->re_sampler);
+        switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_NOTICE,
+                          "destroy_fun_asr: switch_resample_destroy -> on channel: %s\n",
+                          switch_channel_get_name(channel));
+    }
+    switch_mutex_destroy(pvt->mutex);
+    switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_NOTICE,
+                      "destroy_fun_asr: switch_mutex_destroy -> on channel: %s\n",
+                      switch_channel_get_name(channel));
+}
+
+#if 0
 SWITCH_STANDARD_API(uuid_start_funasr_function) {
     if (zstr(cmd)) {
         stream->write_function(stream, "uuid_start_funasr: parameter missing.\n");
@@ -1055,8 +1113,8 @@ SWITCH_STANDARD_API(uuid_start_funasr_function) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "starting funasr:%s\n",
                           switch_channel_get_name(channel));
 
-        switch_da_t *pvt;
-        if (!(pvt = (switch_da_t *) switch_core_session_alloc(ses, sizeof(switch_da_t)))) {
+        fun_asr_context_t *pvt;
+        if (!(pvt = (fun_asr_context_t *) switch_core_session_alloc(ses, sizeof(fun_asr_context_t)))) {
             switch_goto_status(SWITCH_STATUS_SUCCESS, unlock);
         }
         pvt->started = 0;
@@ -1129,9 +1187,9 @@ SWITCH_STANDARD_API(uuid_stop_funasr_function) {
 
     ses = switch_core_session_force_locate(argv[0]);
     if (ses) {
-        switch_da_t *pvt;
+        fun_asr_context_t *pvt;
         switch_channel_t *channel = switch_core_session_get_channel(ses);
-        if ((pvt = (switch_da_t *) switch_channel_get_private(channel, "asr"))) {
+        if ((pvt = (fun_asr_context_t *) switch_channel_get_private(channel, "asr"))) {
             switch_channel_set_private(channel, "asr", nullptr);
             switch_core_media_bug_remove(ses, &pvt->bug);
 
@@ -1157,16 +1215,18 @@ end:
     switch_core_destroy_memory_pool(&pool);
     return status;
 }
+#endif
 
 /**
  *  定义load函数，加载时运行
  */
 SWITCH_MODULE_LOAD_FUNCTION(mod_funasr_load) {
-    switch_api_interface_t *api_interface = nullptr;
+    // switch_api_interface_t *api_interface = nullptr;
     *module_interface = switch_loadable_module_create_module_interface(pool, modname);
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_funasr_load start\n");
 
+#if 0
     // register API
     SWITCH_ADD_API(api_interface,
                    "uuid_start_funasr",
@@ -1179,11 +1239,8 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_funasr_load) {
                    "uuid_stop_funasr api",
                    uuid_stop_funasr_function,
                    "<cmd><args>");
+#endif
 
-
-    //注册终端命令自动补全
-//        switch_console_set_complete("add tasktest1 [args]");
-//        switch_console_set_complete("add tasktest2 [args]");
     // register global state handlers
     switch_core_add_state_handler(&global_cs_handlers);
 
