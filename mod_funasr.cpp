@@ -11,6 +11,8 @@
 
 #include "nlohmann/json.hpp"
 
+bool g_debug = false;
+
 template<typename T>
 class WebsocketClient;
 
@@ -67,7 +69,9 @@ void onAsrTranscriptionStarted(fun_asr_context_t *pvt) {
     switch_mutex_lock(pvt->mutex);
     pvt->started = 1;
     pvt->starting = 0;
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "I need lock!!!!!!!!!!!! \n");
+    if (g_debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "I need lock!!!!!!!!!!!! \n");
+    }
     switch_mutex_unlock(pvt->mutex);
 
     if (pvt->asr_callback) {
@@ -312,8 +316,11 @@ public:
             case websocketpp::frame::opcode::text: {
                 nlohmann::json asrresult = nlohmann::json::parse(payload);
                 std::string id_str = getThreadIdOfString(std::this_thread::get_id());
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "thread: %s, on_message = %s\n", id_str.c_str(),
-                                  payload.c_str());
+                if (g_debug) {
+                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "thread: %s, on_message = %s\n",
+                                      id_str.c_str(),
+                                      payload.c_str());
+                }
 
                 if (asrresult["mode"] == "2pass-online") {
                     onAsrTranscriptionResultChanged(m_asr_context, asrresult["text"]);
@@ -327,7 +334,7 @@ public:
                     m_client.close(hdl, websocketpp::close::status::going_away, "", ec);
 
                     if (ec) {
-                        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Error closing connection: %s\n",
+                        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Error closing connection: %s\n",
                                           ec.message().c_str());
                     }
                 }
@@ -341,8 +348,10 @@ public:
 
     // This method will block until the connection is complete
     int start(const std::string &uri, const std::string &asr_mode, std::vector<int> chunk_vector) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "start wsc with: %s mode: %s\n", uri.c_str(),
-                          asr_mode.c_str());
+        if (g_debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "start wsc with: %s mode: %s\n", uri.c_str(),
+                              asr_mode.c_str());
+        }
 
         {
             // Create a new connection to the given URI
@@ -365,7 +374,9 @@ public:
         // Create a thread to run the ASIO io_service event loop
         m_thread.reset(new websocketpp::lib::thread(&websocketpp::client<T>::run, &m_client));
 
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "start send wsc first msg\n");
+        if (g_debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "start send wsc first msg\n");
+        }
         // first message
         bool wait = false;
         while (true) {
@@ -409,7 +420,9 @@ public:
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "funasr send begin msg failed: %s\n",
                                   ec.message().c_str());
             } else {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "funasr send begin msg success\n");
+                if (g_debug) {
+                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "funasr send begin msg success\n");
+                }
             }
         }
 
@@ -426,7 +439,9 @@ public:
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "funasr send end msg failed: %s\n",
                                   ec.message().c_str());
             } else {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "funasr send end msg success\n");
+                if (g_debug) {
+                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "funasr send end msg success\n");
+                }
             }
         }
 
@@ -438,7 +453,9 @@ public:
 
     // The open handler will signal that we are ready to start sending data
     void on_open(websocketpp::connection_hdl) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Connection opened, starting data!\n");
+        if (g_debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Connection opened, starting data!\n");
+        }
 
         {
             scoped_lock guard(m_lock);
@@ -449,7 +466,9 @@ public:
 
     // The close handler will signal that we should stop sending data
     void on_close(websocketpp::connection_hdl) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Connection closed, stopping data!\n");
+        if (g_debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Connection closed, stopping data!\n");
+        }
 
         {
             scoped_lock guard(m_lock);
@@ -460,7 +479,9 @@ public:
 
     // The fail handler will signal that we should stop sending data
     void on_fail(websocketpp::connection_hdl) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Connection failed, stopping data!\n");
+        if (g_debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Connection failed, stopping data!\n");
+        }
 
         {
             scoped_lock guard(m_lock);
@@ -490,8 +511,6 @@ private:
 #define MAX_FRAME_BUFFER_SIZE (1024*1024) //1MB
 #define SAMPLE_RATE 16000
 
-bool g_debug = false;
-
 funasr_client *generateAsrClient(/*asr_callback_t *asr_callback, */fun_asr_context_t *pvt) {
     auto *fac = new funasr_client(1, pvt);
     if (!fac) {
@@ -501,8 +520,10 @@ funasr_client *generateAsrClient(/*asr_callback_t *asr_callback, */fun_asr_conte
 
     fac->m_client.set_tls_init_handler(bind(&OnTlsInit, ::_1));
 
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "funasr url is:%s, vol multiplier is:%f\n",
-                      pvt->fun_url, pvt->vol_multiplier);
+    if (g_debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "funasr url is:%s, vol multiplier is:%f\n",
+                          pvt->fun_url, pvt->vol_multiplier);
+    }
     return fac;
 }
 
@@ -611,7 +632,9 @@ static void *init_fun_asr(switch_core_session_t *session, const switch_codec_imp
     memset(argv, 0, sizeof(char *) * MAX_API_ARGC);
 
     int argc = switch_split(my_cmd, ' ', argv);
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "cmd:%s, args count: %d\n", my_cmd, argc);
+    if (g_debug) {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "cmd:%s, args count: %d\n", my_cmd, argc);
+    }
 
     for (int idx = 1; idx < MAX_API_ARGC; idx++) {
         if (argv[idx]) {
@@ -620,13 +643,23 @@ static void *init_fun_asr(switch_core_session_t *session, const switch_codec_imp
             if (cnt == 2) {
                 char *var = ss[0];
                 char *val = ss[1];
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "process arg: %s = %s\n", var, val);
+                if (g_debug) {
+                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "process arg: %s = %s\n", var, val);
+                }
                 if (!strcasecmp(var, "funurl")) {
                     _fun_url = val;
                     continue;
                 }
                 if (!strcasecmp(var, "asr_dec_vol")) {
                     _asr_dec_vol = val;
+                    continue;
+                }
+                if (!strcasecmp(var, "debug")) {
+                    if (!strcasecmp(val, "true")) {
+                        g_debug = true;
+                    } else {
+                        g_debug = false;
+                    }
                     continue;
                 }
             }
@@ -670,9 +703,11 @@ static void *init_fun_asr(switch_core_session_t *session, const switch_codec_imp
             pvt = nullptr;
             goto end;
         }
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT,
-                          "create re-sampler bcs of media sampler/s is %d but fun asr support: %d, while ms/p: %d\n",
-                          read_impl->actual_samples_per_second, SAMPLE_RATE, read_impl->microseconds_per_packet);
+        if (g_debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT,
+                              "create re-sampler bcs of media sampler/s is %d but fun asr support: %d, while ms/p: %d\n",
+                              read_impl->actual_samples_per_second, SAMPLE_RATE, read_impl->microseconds_per_packet);
+        }
     }
 
     end:
@@ -686,7 +721,9 @@ static bool start_fun_asr(fun_asr_context_t *pvt, asr_callback_t *asr_callback) 
     if (pvt->started == 0) {
         if (pvt->starting == 0) {
             pvt->starting = 1;
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Starting Transaction \n");
+            if (g_debug) {
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Starting Transaction \n");
+            }
             switch_channel_t *channel = switch_core_session_get_channel(pvt->session);
             pvt->asr_callback = asr_callback;
             funasr_client *fac = generateAsrClient(pvt);
@@ -697,8 +734,10 @@ static bool start_fun_asr(fun_asr_context_t *pvt, asr_callback_t *asr_callback) 
                 goto unlock;
             }
             pvt->fac = fac;
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Init Asr Client.%s\n",
-                              switch_channel_get_name(channel));
+            if (g_debug) {
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Init Asr Client.%s\n",
+                                  switch_channel_get_name(channel));
+            }
 
             std::vector<int> chunk_size;
             chunk_size.push_back(5);
@@ -781,17 +820,24 @@ static void stop_fun_asr(fun_asr_context_t *pvt) {
     switch_mutex_lock(pvt->mutex);
     switch_channel_t *channel = switch_core_session_get_channel(pvt->session);
     if (pvt->fac) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "ASR Stop Succeed channel: %s\n",
-                          switch_channel_get_name(channel));
+        if (g_debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "ASR Stop Succeed channel: %s\n",
+                              switch_channel_get_name(channel));
+        }
         pvt->fac->stop();
         //7: 识别结束, 释放fac对象
         delete pvt->fac;
         pvt->fac = nullptr;
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "stop fun asr and fac is released on channel: %s\n",
-                          switch_channel_get_name(channel));
+        if (g_debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "stop fun asr and fac is released on channel: %s\n",
+                              switch_channel_get_name(channel));
+        }
     } else {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "fun asr has already stopped and released on channel:%s\n",
-                          switch_channel_get_name(channel));
+        if (g_debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
+                              "fun asr has already stopped and released on channel:%s\n",
+                              switch_channel_get_name(channel));
+        }
     }
     switch_mutex_unlock(pvt->mutex);
 }
@@ -799,25 +845,32 @@ static void stop_fun_asr(fun_asr_context_t *pvt) {
 static void destroy_fun_asr(fun_asr_context_t *pvt) {
     switch_core_session_t *session = pvt->session;
     switch_channel_t *channel = switch_core_session_get_channel(session);
-    switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(pvt->session), SWITCH_LOG_NOTICE,
-                      "destroy_fun_asr: release all resource for session -> on channel: %s\n",
-                      switch_channel_get_name(channel));
-
+    if (g_debug) {
+        switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(pvt->session), SWITCH_LOG_NOTICE,
+                          "destroy_fun_asr: release all resource for session -> on channel: %s\n",
+                          switch_channel_get_name(channel));
+    }
     stop_fun_asr(pvt);
-    switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_NOTICE,
-                      "destroy_fun_asr: stop_fun_asr -> channel: %s\n",
-                      switch_channel_get_name(channel));
+    if (g_debug) {
+        switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_NOTICE,
+                          "destroy_fun_asr: stop_fun_asr -> channel: %s\n",
+                          switch_channel_get_name(channel));
+    }
 
     if (pvt->re_sampler) {
         switch_resample_destroy(&pvt->re_sampler);
-        switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_NOTICE,
-                          "destroy_fun_asr: switch_resample_destroy -> on channel: %s\n",
-                          switch_channel_get_name(channel));
+        if (g_debug) {
+            switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_NOTICE,
+                              "destroy_fun_asr: switch_resample_destroy -> on channel: %s\n",
+                              switch_channel_get_name(channel));
+        }
     }
     switch_mutex_destroy(pvt->mutex);
-    switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_NOTICE,
-                      "destroy_fun_asr: switch_mutex_destroy -> on channel: %s\n",
-                      switch_channel_get_name(channel));
+    if (g_debug) {
+        switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_NOTICE,
+                          "destroy_fun_asr: switch_mutex_destroy -> on channel: %s\n",
+                          switch_channel_get_name(channel));
+    }
 }
 
 /**
