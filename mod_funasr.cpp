@@ -19,14 +19,16 @@ class WebsocketClient;
 typedef WebsocketClient<websocketpp::config::asio_tls_client> funasr_client;
 
 typedef void (*on_asr_started_func_t) (void *);
-typedef void (*on_asr_sentence_func_t) (void *, const char *sentence);
+typedef void (*on_asr_sentence_begin_func_t) (void *);
+typedef void (*on_asr_sentence_end_func_t) (void *, const char *sentence);
 typedef void (*on_asr_result_changed_func_t) (void *, const char *result);
 typedef void (*on_asr_stopped_func_t) (void *);
 
 typedef struct {
     void *asr_caller;
     on_asr_started_func_t on_asr_started_func;
-    on_asr_sentence_func_t on_asr_sentence_func;
+    on_asr_sentence_begin_func_t on_asr_sentence_begin_func;
+    on_asr_sentence_end_func_t on_asr_sentence_end_func;
     on_asr_result_changed_func_t on_asr_result_changed_func;
     on_asr_stopped_func_t on_asr_stopped_func;
 } asr_callback_t;
@@ -99,7 +101,7 @@ void onAsrSentenceBegin(fun_asr_context_t *pvt) {
 void onAsrSentenceEnd(fun_asr_context_t *pvt, const std::string &text) {
     // switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrSentenceEnd: %s\n", asr_callback->unique_id);
     if (pvt->asr_callback) {
-        pvt->asr_callback->on_asr_sentence_func(pvt->asr_callback->asr_caller, text.c_str());
+        pvt->asr_callback->on_asr_sentence_end_func(pvt->asr_callback->asr_caller, text.c_str());
     }
 #if 0
     switch_event_t *event = nullptr;
