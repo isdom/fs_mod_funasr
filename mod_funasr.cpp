@@ -564,7 +564,7 @@ static switch_status_t on_channel_init(switch_core_session_t *session) {
     return SWITCH_STATUS_SUCCESS;
 }
 
-switch_state_handler_table_t global_cs_handlers = {
+switch_state_handler_table_t funasr_cs_handlers = {
         /*! executed when the state changes to init */
         // switch_state_handler_t on_init;
         on_channel_init,
@@ -875,17 +875,38 @@ static void destroy_fun_asr(fun_asr_context_t *pvt) {
     }
 }
 
+#define FUNASR_DEBUG_SYNTAX "<on|off>"
+SWITCH_STANDARD_API(mod_funasr_debug)
+{
+    if (zstr(cmd)) {
+        stream->write_function(stream, "-USAGE: %s\n", FUNASR_DEBUG_SYNTAX);
+    } else {
+        if (!strcasecmp(cmd, "on")) {
+            g_debug = true;
+            stream->write_function(stream, "funasr Debug: on\n");
+        } else if (!strcasecmp(cmd, "off")) {
+            g_debug = false;
+            stream->write_function(stream, "funasr Debug: off\n");
+        } else {
+            stream->write_function(stream, "-USAGE: %s\n", FUNASR_DEBUG_SYNTAX);
+        }
+    }
+    return SWITCH_STATUS_SUCCESS;
+}
+
 /**
  *  定义load函数，加载时运行
  */
 SWITCH_MODULE_LOAD_FUNCTION(mod_funasr_load) {
-    // switch_api_interface_t *api_interface = nullptr;
+    switch_api_interface_t *api_interface = nullptr;
     *module_interface = switch_loadable_module_create_module_interface(pool, modname);
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_funasr load starting\n");
 
     // register global state handlers
-    switch_core_add_state_handler(&global_cs_handlers);
+    switch_core_add_state_handler(&funasr_cs_handlers);
+
+    SWITCH_ADD_API(api_interface, "funasr_debug", "Set funasr debug", mod_funasr_debug, FUNASR_DEBUG_SYNTAX);
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mod_funasr loaded\n");
 
@@ -897,7 +918,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_funasr_load) {
  */
 SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_funasr_shutdown) {
     // unregister global state handlers
-    switch_core_remove_state_handler(&global_cs_handlers);
+    switch_core_remove_state_handler(&funasr_cs_handlers);
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, " mod_funasr shutdown called\n");
     return SWITCH_STATUS_SUCCESS;
