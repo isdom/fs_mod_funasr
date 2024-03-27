@@ -857,5 +857,6 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_funasr_shutdown) {
     switch_core_remove_state_handler(&fun_asr_cs_handlers);
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, " mod_funasr shutdown called\n");
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, " mod_funasr unload\n");
     return SWITCH_STATUS_SUCCESS;
 }
