@@ -13,6 +13,12 @@
 
 bool g_debug = false;
 
+typedef struct {
+    switch_atomic_t fun_asr_concurrent_cnt;
+} fun_asr_global_t;
+
+fun_asr_global_t *fun_asr_globals;
+
 template<typename T>
 class WebsocketClient;
 
@@ -639,7 +645,10 @@ static void *init_fun_asr(switch_core_session_t *session, const switch_codec_imp
         }
     }
 
-    end:
+    // increment funasr concurrent count
+    switch_atomic_inc(&fun_asr_globals->fun_asr_concurrent_cnt);
+
+end:
     switch_core_destroy_memory_pool(&pool);
     return pvt;
 }
@@ -795,6 +804,9 @@ static void destroy_fun_asr(fun_asr_context_t *pvt) {
                           switch_channel_get_name(channel));
     }
 
+    // decrement funasr concurrent count
+    switch_atomic_dec(&fun_asr_globals->fun_asr_concurrent_cnt);
+
     if (pvt->re_sampler) {
         switch_resample_destroy(&pvt->re_sampler);
         if (g_debug) {
@@ -809,6 +821,20 @@ static void destroy_fun_asr(fun_asr_context_t *pvt) {
                           "destroy_fun_asr: switch_mutex_destroy -> on channel: %s\n",
                           switch_channel_get_name(channel));
     }
+}
+
+SWITCH_STANDARD_API(funasr_concurrent_cnt_function) {
+    const uint32_t concurrent_cnt = switch_atomic_read (&fun_asr_globals->fun_asr_concurrent_cnt);
+    stream->write_function(stream, "%d\n", concurrent_cnt);
+    switch_event_t *event = nullptr;
+    if (switch_event_create(&event, SWITCH_EVENT_CUSTOM) == SWITCH_STATUS_SUCCESS) {
+        event->subclass_name = strdup("funasr_concurrent_cnt");
+        switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "Event-Subclass", event->subclass_name);
+        switch_event_add_header(event, SWITCH_STACK_BOTTOM, "Funasr-Concurrent-Cnt", "%d", concurrent_cnt);
+        switch_event_fire(&event);
+    }
+
+    return SWITCH_STATUS_SUCCESS;
 }
 
 #define FUNASR_DEBUG_SYNTAX "<on|off>"
@@ -839,8 +865,16 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_funasr_load) {
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_funasr load starting\n");
 
+    fun_asr_globals = (fun_asr_global_t *)switch_core_alloc(pool, sizeof(fun_asr_global_t));
+
     // register global state handlers
     switch_core_add_state_handler(&fun_asr_cs_handlers);
+
+    SWITCH_ADD_API(api_interface,
+                   "funasr_concurrent_cnt",
+                   "funasr_concurrent_cnt api",
+                   funasr_concurrent_cnt_function,
+                   "<cmd><args>");
 
     SWITCH_ADD_API(api_interface, "funasr_debug", "Set funasr debug", mod_funasr_debug, FUNASR_DEBUG_SYNTAX);
 
