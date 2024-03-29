@@ -837,11 +837,11 @@ SWITCH_STANDARD_API(funasr_concurrent_cnt_function) {
     return SWITCH_STATUS_SUCCESS;
 }
 
-#define FUNASR_DEBUG_SYNTAX "<on|off>"
+#define FUN_ASR_DEBUG_SYNTAX "<on|off>"
 SWITCH_STANDARD_API(mod_funasr_debug)
 {
     if (zstr(cmd)) {
-        stream->write_function(stream, "-USAGE: %s\n", FUNASR_DEBUG_SYNTAX);
+        stream->write_function(stream, "-USAGE: %s\n", FUN_ASR_DEBUG_SYNTAX);
     } else {
         if (!strcasecmp(cmd, "on")) {
             g_debug = true;
@@ -850,7 +850,7 @@ SWITCH_STANDARD_API(mod_funasr_debug)
             g_debug = false;
             stream->write_function(stream, "funasr Debug: off\n");
         } else {
-            stream->write_function(stream, "-USAGE: %s\n", FUNASR_DEBUG_SYNTAX);
+            stream->write_function(stream, "-USAGE: %s\n", FUN_ASR_DEBUG_SYNTAX);
         }
     }
     return SWITCH_STATUS_SUCCESS;
@@ -876,7 +876,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_funasr_load) {
                    funasr_concurrent_cnt_function,
                    "<cmd><args>");
 
-    SWITCH_ADD_API(api_interface, "funasr_debug", "Set funasr debug", mod_funasr_debug, FUNASR_DEBUG_SYNTAX);
+    SWITCH_ADD_API(api_interface, "funasr_debug", "Set funasr debug", mod_funasr_debug, FUN_ASR_DEBUG_SYNTAX);
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mod_funasr loaded\n");
 
