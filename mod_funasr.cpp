@@ -220,7 +220,7 @@ public:
     typedef websocketpp::lib::lock_guard<websocketpp::lib::mutex> scoped_lock;
 
     WebsocketClient(int is_ssl, fun_asr_context_t *asr_context) : m_open(false), m_done(false) {
-        m_asr_context = asr_context;
+        m_asr_ctx = asr_context;
 
         // set up access channels to only log interesting things
         m_client.clear_access_channels(websocketpp::log::alevel::all);
@@ -266,9 +266,9 @@ public:
                 }
 
                 if (asrresult["mode"] == "2pass-online") {
-                    onAsrTranscriptionResultChanged(m_asr_context, asrresult["text"]);
+                    onAsrTranscriptionResultChanged(m_asr_ctx, asrresult["text"]);
                 } else if (asrresult["mode"] == "2pass-offline") {
-                    onAsrSentenceEnd(m_asr_context, asrresult["text"]);
+                    onAsrSentenceEnd(m_asr_ctx, asrresult["text"]);
                 }
 
                 if (asrresult["is_final"] == true) {
@@ -391,7 +391,7 @@ public:
         m_client.stop_perpetual();
         m_thread->join();
 
-        onAsrChannelClosed(m_asr_context);
+        onAsrChannelClosed(m_asr_ctx);
     }
 
     // The open handler will signal that we are ready to start sending data
@@ -404,7 +404,7 @@ public:
             scoped_lock guard(m_lock);
             m_open = true;
         }
-        onAsrTranscriptionStarted(m_asr_context);
+        onAsrTranscriptionStarted(m_asr_ctx);
     }
 
     // The close handler will signal that we should stop sending data
@@ -417,7 +417,7 @@ public:
             scoped_lock guard(m_lock);
             m_done = true;
         }
-        onAsrTranscriptionCompleted(m_asr_context);
+        onAsrTranscriptionCompleted(m_asr_ctx);
     }
 
     // The fail handler will signal that we should stop sending data
@@ -430,7 +430,7 @@ public:
             scoped_lock guard(m_lock);
             m_done = true;
         }
-        onAsrTaskFailed(m_asr_context);
+        onAsrTaskFailed(m_asr_ctx);
     }
 
     void sendAudio(uint8_t *dp, size_t data_len, websocketpp::lib::error_code &ec) {
@@ -442,7 +442,7 @@ public:
 
 private:
 
-    fun_asr_context_t *m_asr_context;
+    fun_asr_context_t *m_asr_ctx;
     websocketpp::connection_hdl m_hdl;
     websocketpp::lib::mutex m_lock;
     bool m_open;
