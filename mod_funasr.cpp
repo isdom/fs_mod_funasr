@@ -550,7 +550,7 @@ switch_state_handler_table_t fun_asr_cs_handlers = {
 void adjustVolume(int16_t *pcm, size_t pcm_len, float vol_multiplier) {
     int32_t pcm_val;
     for (size_t ctr = 0; ctr < pcm_len; ctr++) {
-        pcm_val = (int32_t)(pcm[ctr] * vol_multiplier);
+        pcm_val = (int32_t)((float)pcm[ctr] * vol_multiplier);
         if (pcm_val < 32767 && pcm_val > -32768) {
             pcm[ctr] = (int16_t)pcm_val;
         } else if (pcm_val > 32767) {
