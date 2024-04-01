@@ -90,7 +90,7 @@ void onAsrTranscriptionStarted(fun_asr_context_t *pvt) {
     if (pvt->asr_callback) {
         pvt->asr_callback->on_asr_started_func(pvt->asr_callback->asr_caller);
     } else {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "onAsrTranscriptionStarted: pvt->asr_callback is null\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onAsrTranscriptionStarted: pvt->asr_callback is null\n");
     }
 }
 
@@ -120,6 +120,8 @@ void onAsrSentenceEnd(fun_asr_context_t *pvt, const std::string &text) {
     }
     if (pvt->asr_callback) {
         pvt->asr_callback->on_asr_sentence_end_func(pvt->asr_callback->asr_caller, text.c_str());
+    } else {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onAsrSentenceEnd: pvt->asr_callback is null\n");
     }
 }
 
@@ -135,6 +137,8 @@ void onAsrTranscriptionResultChanged(fun_asr_context_t *pvt, const std::string &
     }
     if (pvt->asr_callback) {
         pvt->asr_callback->on_asr_result_changed_func(pvt->asr_callback->asr_caller, text.c_str());
+    } else {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onAsrTranscriptionResultChanged: pvt->asr_callback is null\n");
     }
 }
 
@@ -174,6 +178,8 @@ void onAsrChannelClosed(fun_asr_context_t *pvt) {
     }
     if (pvt->asr_callback) {
         pvt->asr_callback->on_asr_stopped_func(pvt->asr_callback->asr_caller);
+    } else {
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onAsrChannelClosed: pvt->asr_callback is null\n");
     }
 }
 
