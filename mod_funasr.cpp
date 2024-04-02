@@ -78,9 +78,9 @@ typedef struct {
  *
  * @param pvt
  */
-void onAsrTranscriptionStarted(fun_asr_context_t *pvt) {
+void onFunasrTranscriptionStarted(fun_asr_context_t *pvt) {
     if (g_debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrTranscriptionStarted: funasr\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrTranscriptionStarted: funasr\n");
     }
     switch_mutex_lock(pvt->mutex);
     pvt->started = 1;
@@ -90,7 +90,7 @@ void onAsrTranscriptionStarted(fun_asr_context_t *pvt) {
     if (pvt->asr_callback) {
         pvt->asr_callback->on_asr_started_func(pvt->asr_callback->asr_caller);
     } else {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onAsrTranscriptionStarted: pvt->asr_callback is null\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onFunasrTranscriptionStarted: pvt->asr_callback is null\n");
     }
 }
 
@@ -99,11 +99,11 @@ void onAsrTranscriptionStarted(fun_asr_context_t *pvt) {
  *
  * @param pvt
  */
-void onAsrSentenceBegin(fun_asr_context_t *pvt) {
+void onFunasrSentenceBegin(fun_asr_context_t *pvt) {
     if (g_debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrSentenceBegin: funasr\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrSentenceBegin: funasr\n");
     }
-//    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE,"onAsrSentenceBegin: status code=%d, task id=%s, index=%d, time=%d\n", cbEvent->getStatusCode(), cbEvent->getTaskId(),
+//    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE,"onFunasrSentenceBegin: status code=%d, task id=%s, index=%d, time=%d\n", cbEvent->getStatusCode(), cbEvent->getTaskId(),
 //                    cbEvent->getSentenceIndex(),
 //                    cbEvent->getSentenceTime());
 }
@@ -114,14 +114,14 @@ void onAsrSentenceBegin(fun_asr_context_t *pvt) {
  * @param pvt
  * @param text
  */
-void onAsrSentenceEnd(fun_asr_context_t *pvt, const std::string &text) {
+void onFunasrSentenceEnd(fun_asr_context_t *pvt, const std::string &text) {
     if (g_debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrSentenceEnd: funasr\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrSentenceEnd: funasr\n");
     }
     if (pvt->asr_callback) {
         pvt->asr_callback->on_asr_sentence_end_func(pvt->asr_callback->asr_caller, text.c_str());
     } else {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onAsrSentenceEnd: pvt->asr_callback is null\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onFunasrSentenceEnd: pvt->asr_callback is null\n");
     }
 }
 
@@ -131,14 +131,14 @@ void onAsrSentenceEnd(fun_asr_context_t *pvt, const std::string &text) {
  * @param pvt
  * @param text
  */
-void onAsrTranscriptionResultChanged(fun_asr_context_t *pvt, const std::string &text) {
+void onFunasrTranscriptionResultChanged(fun_asr_context_t *pvt, const std::string &text) {
     if (g_debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrTranscriptionResultChanged: funasr\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrTranscriptionResultChanged: funasr\n");
     }
     if (pvt->asr_callback) {
         pvt->asr_callback->on_asr_result_changed_func(pvt->asr_callback->asr_caller, text.c_str());
     } else {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onAsrTranscriptionResultChanged: pvt->asr_callback is null\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onFunasrTranscriptionResultChanged: pvt->asr_callback is null\n");
     }
 }
 
@@ -147,9 +147,9 @@ void onAsrTranscriptionResultChanged(fun_asr_context_t *pvt, const std::string &
  *
  * @param pvt
  */
-void onAsrTranscriptionCompleted(fun_asr_context_t *pvt) {
+void onFunasrTranscriptionCompleted(fun_asr_context_t *pvt) {
     if (g_debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrTranscriptionCompleted: funasr\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrTranscriptionCompleted: funasr\n");
     }
 }
 
@@ -158,9 +158,9 @@ void onAsrTranscriptionCompleted(fun_asr_context_t *pvt) {
  *
  * @param pvt
  */
-void onAsrTaskFailed(fun_asr_context_t *pvt) {
+void onFunasrTaskFailed(fun_asr_context_t *pvt) {
     if (g_debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrTaskFailed: funasr\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrTaskFailed: funasr\n");
     }
     switch_mutex_lock(pvt->mutex);
     pvt->started = 0;
@@ -172,14 +172,14 @@ void onAsrTaskFailed(fun_asr_context_t *pvt) {
  *
  * @param pvt
  */
-void onAsrChannelClosed(fun_asr_context_t *pvt) {
+void onFunasrChannelClosed(fun_asr_context_t *pvt) {
     if (g_debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onAsrChannelClosed: funasr\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrChannelClosed: funasr\n");
     }
     if (pvt->asr_callback) {
         pvt->asr_callback->on_asr_stopped_func(pvt->asr_callback->asr_caller);
     } else {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onAsrChannelClosed: pvt->asr_callback is null\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onFunasrChannelClosed: pvt->asr_callback is null\n");
     }
 }
 
@@ -272,9 +272,9 @@ public:
                 }
 
                 if (asrresult["mode"] == "2pass-online") {
-                    onAsrTranscriptionResultChanged(m_asr_ctx, asrresult["text"]);
+                    onFunasrTranscriptionResultChanged(m_asr_ctx, asrresult["text"]);
                 } else if (asrresult["mode"] == "2pass-offline") {
-                    onAsrSentenceEnd(m_asr_ctx, asrresult["text"]);
+                    onFunasrSentenceEnd(m_asr_ctx, asrresult["text"]);
                 }
 
                 if (asrresult["is_final"] == true) {
@@ -397,7 +397,7 @@ public:
         m_client.stop_perpetual();
         m_thread->join();
 
-        onAsrChannelClosed(m_asr_ctx);
+        onFunasrChannelClosed(m_asr_ctx);
     }
 
     // The open handler will signal that we are ready to start sending data
@@ -410,7 +410,7 @@ public:
             scoped_lock guard(m_lock);
             m_open = true;
         }
-        onAsrTranscriptionStarted(m_asr_ctx);
+        onFunasrTranscriptionStarted(m_asr_ctx);
     }
 
     // The close handler will signal that we should stop sending data
@@ -423,7 +423,7 @@ public:
             scoped_lock guard(m_lock);
             m_done = true;
         }
-        onAsrTranscriptionCompleted(m_asr_ctx);
+        onFunasrTranscriptionCompleted(m_asr_ctx);
     }
 
     // The fail handler will signal that we should stop sending data
@@ -436,7 +436,7 @@ public:
             scoped_lock guard(m_lock);
             m_done = true;
         }
-        onAsrTaskFailed(m_asr_ctx);
+        onFunasrTaskFailed(m_asr_ctx);
     }
 
     void sendAudio(uint8_t *dp, size_t data_len, websocketpp::lib::error_code &ec) {
