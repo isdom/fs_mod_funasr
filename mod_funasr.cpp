@@ -263,7 +263,7 @@ public:
         const std::string &payload = msg->get_payload();
         switch (msg->get_opcode()) {
             case websocketpp::frame::opcode::text: {
-                nlohmann::json asrresult = nlohmann::json::parse(payload);
+                nlohmann::json asr_result = nlohmann::json::parse(payload);
                 std::string id_str = getThreadIdOfString(std::this_thread::get_id());
                 if (g_debug) {
                     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "thread: %s, on_message = %s\n",
@@ -271,13 +271,13 @@ public:
                                       payload.c_str());
                 }
 
-                if (asrresult["mode"] == "2pass-online") {
-                    onFunasrTranscriptionResultChanged(m_asr_ctx, asrresult["text"]);
-                } else if (asrresult["mode"] == "2pass-offline") {
-                    onFunasrSentenceEnd(m_asr_ctx, asrresult["text"]);
+                if (asr_result["mode"] == "2pass-online") {
+                    onFunasrTranscriptionResultChanged(m_asr_ctx, asr_result["text"]);
+                } else if (asr_result["mode"] == "2pass-offline") {
+                    onFunasrSentenceEnd(m_asr_ctx, asr_result["text"]);
                 }
 
-                if (asrresult["is_final"] == true) {
+                if (asr_result["is_final"] == true) {
                     websocketpp::lib::error_code ec;
 
                     m_client.close(hdl, websocketpp::close::status::going_away, "", ec);
