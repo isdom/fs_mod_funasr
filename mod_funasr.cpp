@@ -352,19 +352,19 @@ public:
         }
 
         {
-            nlohmann::json jsonbegin;
+            nlohmann::json json_begin;
             nlohmann::json chunk_size = nlohmann::json::array();
             chunk_size.push_back(chunk_vector[0]);
             chunk_size.push_back(chunk_vector[1]);
             chunk_size.push_back(chunk_vector[2]);
-            jsonbegin["mode"] = asr_mode;
-            jsonbegin["chunk_size"] = chunk_size;
-            jsonbegin["wav_name"] = "asr";
-            jsonbegin["wav_format"] = "pcm";
-            jsonbegin["is_speaking"] = true;
+            json_begin["mode"] = asr_mode;
+            json_begin["chunk_size"] = chunk_size;
+            json_begin["wav_name"] = "asr";
+            json_begin["wav_format"] = "pcm";
+            json_begin["is_speaking"] = true;
 
             websocketpp::lib::error_code ec;
-            m_client.send(m_hdl, jsonbegin.dump(), websocketpp::frame::opcode::text, ec);
+            m_client.send(m_hdl, json_begin.dump(), websocketpp::frame::opcode::text, ec);
             if (ec) {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "funasr send begin msg failed: %s\n",
                                   ec.message().c_str());
