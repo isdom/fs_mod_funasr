@@ -380,10 +380,10 @@ public:
 
     void stop() {
         {
-            nlohmann::json jsonend;
-            jsonend["is_speaking"] = false;
+            nlohmann::json json_end;
+            json_end["is_speaking"] = false;
             websocketpp::lib::error_code ec;
-            m_client.send(m_hdl, jsonend.dump(), websocketpp::frame::opcode::text, ec);
+            m_client.send(m_hdl, json_end.dump(), websocketpp::frame::opcode::text, ec);
             if (ec) {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "funasr send end msg failed: %s\n",
                                   ec.message().c_str());
