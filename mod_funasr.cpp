@@ -225,8 +225,8 @@ public:
     // wss_client;
     typedef websocketpp::lib::lock_guard<websocketpp::lib::mutex> scoped_lock;
 
-    WebsocketClient(int is_ssl, fun_asr_context_t *asr_context) : m_open(false), m_done(false) {
-        m_asr_ctx = asr_context;
+    WebsocketClient(int is_ssl, fun_asr_context_t *asr_ctx) : m_open(false), m_done(false) {
+        m_asr_ctx = asr_ctx;
 
         // set up access channels to only log interesting things
         m_client.clear_access_channels(websocketpp::log::alevel::all);
