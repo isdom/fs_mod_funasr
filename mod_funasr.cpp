@@ -14,6 +14,7 @@
 bool g_debug = false;
 
 typedef struct {
+    bool _debug;
     switch_atomic_t fun_asr_concurrent_cnt;
 } fun_asr_global_t;
 
