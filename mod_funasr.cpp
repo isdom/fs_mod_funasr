@@ -874,6 +874,8 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_funasr_load) {
 
     fun_asr_globals = (fun_asr_global_t *)switch_core_alloc(pool, sizeof(fun_asr_global_t));
 
+    fun_asr_globals->_debug = false;
+
     // register global state handlers
     switch_core_add_state_handler(&fun_asr_cs_handlers);
 
