@@ -852,9 +852,11 @@ SWITCH_STANDARD_API(mod_funasr_debug)
     } else {
         if (!strcasecmp(cmd, "on")) {
             g_debug = true;
+            fun_asr_globals->_debug = true;
             stream->write_function(stream, "funasr Debug: on\n");
         } else if (!strcasecmp(cmd, "off")) {
             g_debug = false;
+            fun_asr_globals->_debug = false;
             stream->write_function(stream, "funasr Debug: off\n");
         } else {
             stream->write_function(stream, "-USAGE: %s\n", FUN_ASR_DEBUG_SYNTAX);
