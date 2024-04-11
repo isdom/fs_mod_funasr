@@ -80,7 +80,7 @@ typedef struct {
  * @param pvt
  */
 void onFunasrTranscriptionStarted(fun_asr_context_t *pvt) {
-    if (g_debug || fun_asr_globals->_debug) {
+    if (fun_asr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrTranscriptionStarted: funasr\n");
     }
     switch_mutex_lock(pvt->mutex);
@@ -101,7 +101,7 @@ void onFunasrTranscriptionStarted(fun_asr_context_t *pvt) {
  * @param pvt
  */
 void onFunasrSentenceBegin(fun_asr_context_t *pvt) {
-    if (g_debug) {
+    if (fun_asr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrSentenceBegin: funasr\n");
     }
 //    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE,"onFunasrSentenceBegin: status code=%d, task id=%s, index=%d, time=%d\n", cbEvent->getStatusCode(), cbEvent->getTaskId(),
