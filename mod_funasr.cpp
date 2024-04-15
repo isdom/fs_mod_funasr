@@ -160,7 +160,7 @@ void onFunasrTranscriptionCompleted(fun_asr_context_t *pvt) {
  * @param pvt
  */
 void onFunasrTaskFailed(fun_asr_context_t *pvt) {
-    if (g_debug) {
+    if (fun_asr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrTaskFailed: funasr\n");
     }
     switch_mutex_lock(pvt->mutex);
