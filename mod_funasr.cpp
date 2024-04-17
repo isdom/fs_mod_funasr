@@ -266,7 +266,7 @@ public:
             case websocketpp::frame::opcode::text: {
                 nlohmann::json asr_result = nlohmann::json::parse(payload);
                 std::string id_str = getThreadIdOfString(std::this_thread::get_id());
-                if (g_debug) {
+                if (fun_asr_globals->_debug) {
                     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "thread: %s, on_message = %s\n",
                                       id_str.c_str(),
                                       payload.c_str());
