@@ -298,7 +298,7 @@ public:
 
     // This method will block until the connection is complete
     int start(const std::string &uri, const std::string &asr_mode, std::vector<int> chunk_vector) {
-        if (g_debug) {
+        if (fun_asr_globals->_debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "start wsc with: %s mode: %s\n", uri.c_str(),
                               asr_mode.c_str());
         }
