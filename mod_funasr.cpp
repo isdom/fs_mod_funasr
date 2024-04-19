@@ -324,7 +324,7 @@ public:
         // Create a thread to run the ASIO io_service event loop
         m_thread.reset(new websocketpp::lib::thread(&websocketpp::client<T>::run, &m_client));
 
-        if (g_debug) {
+        if (fun_asr_globals->_debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "start send wsc first msg\n");
         }
         // first message
