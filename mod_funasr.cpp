@@ -403,7 +403,7 @@ public:
 
     // The open handler will signal that we are ready to start sending data
     void on_open(const websocketpp::connection_hdl &) {
-        if (g_debug) {
+        if (fun_asr_globals->_debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Connection opened, starting data!\n");
         }
 
