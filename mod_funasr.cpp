@@ -429,7 +429,7 @@ public:
 
     // The fail handler will signal that we should stop sending data
     void on_fail(const websocketpp::connection_hdl &) {
-        if (g_debug) {
+        if (fun_asr_globals->_debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Connection failed, stopping data!\n");
         }
 
