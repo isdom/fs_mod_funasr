@@ -470,7 +470,7 @@ funasr_client *generateAsrClient(fun_asr_context_t *pvt) {
 
     fac->m_client.set_tls_init_handler(bind(&OnTlsInit, ::_1));
 
-    if (g_debug) {
+    if (fun_asr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "funasr url is:%s, vol multiplier is:%f\n",
                           pvt->fun_url, pvt->vol_multiplier);
     }
