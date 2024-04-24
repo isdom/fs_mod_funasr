@@ -583,7 +583,7 @@ static void *init_fun_asr(switch_core_session_t *session, const switch_codec_imp
     memset(argv, 0, sizeof(char *) * MAX_API_ARGC);
 
     int argc = switch_split(my_cmd, ' ', argv);
-    if (g_debug) {
+    if (fun_asr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "cmd:%s, args count: %d\n", my_cmd, argc);
     }
 
