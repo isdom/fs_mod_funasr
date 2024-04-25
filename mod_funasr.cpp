@@ -645,7 +645,7 @@ static void *init_fun_asr(switch_core_session_t *session, const switch_codec_imp
             pvt = nullptr;
             goto end;
         }
-        if (g_debug) {
+        if (fun_asr_globals->_debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT,
                               "create re-sampler bcs of media sampler/s is %d but fun asr support: %d, while ms/p: %d\n",
                               read_impl->actual_samples_per_second, SAMPLE_RATE, read_impl->microseconds_per_packet);
