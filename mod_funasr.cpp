@@ -370,7 +370,7 @@ public:
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "funasr send begin msg failed: %s\n",
                                   ec.message().c_str());
             } else {
-                if (g_debug) {
+                if (fun_asr_globals->_debug) {
                     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "funasr send begin msg success\n");
                 }
             }
