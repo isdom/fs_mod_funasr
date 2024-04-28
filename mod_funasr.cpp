@@ -594,7 +594,7 @@ static void *init_fun_asr(switch_core_session_t *session, const switch_codec_imp
             if (cnt == 2) {
                 char *var = ss[0];
                 char *val = ss[1];
-                if (g_debug) {
+                if (fun_asr_globals->_debug) {
                     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "process arg: %s = %s\n", var, val);
                 }
                 if (!strcasecmp(var, "funurl")) {
