@@ -671,7 +671,7 @@ static bool start_fun_asr(fun_asr_context_t *pvt, asr_callback_t *asr_callback) 
     if (pvt->started == 0) {
         if (pvt->starting == 0) {
             pvt->starting = 1;
-            if (g_debug) {
+            if (fun_asr_globals->_debug) {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Starting Transaction \n");
             }
             switch_channel_t *channel = switch_core_session_get_channel(pvt->session);
