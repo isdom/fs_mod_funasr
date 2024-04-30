@@ -684,7 +684,7 @@ static bool start_fun_asr(fun_asr_context_t *pvt, asr_callback_t *asr_callback) 
                 goto unlock;
             }
             pvt->fac = fac;
-            if (g_debug) {
+            if (fun_asr_globals->_debug) {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Init Fun Asr Client.%s\n",
                                   switch_channel_get_name(channel));
             }
