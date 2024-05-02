@@ -754,7 +754,7 @@ static bool send_audio_to_fun_asr(fun_asr_context_t *pvt, void *data, uint32_t d
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "send_audio_to_fun_asr: funasr starting, ignore send audio\n");
         }
         ret_val = true;
-        if (g_debug) {
+        if (fun_asr_globals->_debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "send_audio_to_fun_asr: send audio %d\n",
                               data_len);
         }
