@@ -774,7 +774,7 @@ static void stop_fun_asr(fun_asr_context_t *pvt) {
     switch_mutex_lock(pvt->mutex);
     switch_channel_t *channel = switch_core_session_get_channel(pvt->session);
     if (pvt->fac) {
-        if (g_debug) {
+        if (fun_asr_globals->_debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "try to stop fun asr on channel: %s\n",
                               switch_channel_get_name(channel));
         }
