@@ -782,7 +782,7 @@ static void stop_fun_asr(fun_asr_context_t *pvt) {
         //7: 识别结束, 释放fac对象
         delete pvt->fac;
         pvt->fac = nullptr;
-        if (g_debug) {
+        if (fun_asr_globals->_debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "stop fun asr and fac is released on channel: %s\n",
                               switch_channel_get_name(channel));
         }
