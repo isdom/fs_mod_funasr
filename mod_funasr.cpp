@@ -799,7 +799,7 @@ static void stop_fun_asr(fun_asr_context_t *pvt) {
 static void destroy_fun_asr(fun_asr_context_t *pvt) {
     switch_core_session_t *session = pvt->session;
     switch_channel_t *channel = switch_core_session_get_channel(session);
-    if (g_debug) {
+    if (fun_asr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(pvt->session), SWITCH_LOG_NOTICE,
                           "destroy_fun_asr: release all resource for session -> on channel: %s\n",
                           switch_channel_get_name(channel));
