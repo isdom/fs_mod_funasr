@@ -805,7 +805,7 @@ static void destroy_fun_asr(fun_asr_context_t *pvt) {
                           switch_channel_get_name(channel));
     }
     stop_fun_asr(pvt);
-    if (g_debug) {
+    if (fun_asr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_NOTICE,
                           "destroy_fun_asr: stop_fun_asr -> channel: %s\n",
                           switch_channel_get_name(channel));
