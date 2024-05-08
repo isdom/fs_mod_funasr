@@ -816,7 +816,7 @@ static void destroy_fun_asr(fun_asr_context_t *pvt) {
 
     if (pvt->re_sampler) {
         switch_resample_destroy(&pvt->re_sampler);
-        if (g_debug) {
+        if (fun_asr_globals->_debug) {
             switch_log_printf(SWITCH_CHANNEL_SESSION_LOG(session), SWITCH_LOG_NOTICE,
                               "destroy_fun_asr: switch_resample_destroy -> on channel: %s\n",
                               switch_channel_get_name(channel));
