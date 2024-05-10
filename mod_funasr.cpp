@@ -11,8 +11,6 @@
 
 #include "nlohmann/json.hpp"
 
-bool g_debug = false;
-
 typedef struct {
     bool _debug;
     switch_atomic_t fun_asr_concurrent_cnt;
@@ -851,11 +849,9 @@ SWITCH_STANDARD_API(mod_funasr_debug)
         stream->write_function(stream, "-USAGE: %s\n", FUN_ASR_DEBUG_SYNTAX);
     } else {
         if (!strcasecmp(cmd, "on")) {
-            g_debug = true;
             fun_asr_globals->_debug = true;
             stream->write_function(stream, "funasr Debug: on\n");
         } else if (!strcasecmp(cmd, "off")) {
-            g_debug = false;
             fun_asr_globals->_debug = false;
             stream->write_function(stream, "funasr Debug: off\n");
         } else {
