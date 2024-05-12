@@ -105,9 +105,6 @@ void onFunasrSentenceBegin(fun_asr_context_t *pvt) {
     if (fun_asr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrSentenceBegin: funasr\n");
     }
-//    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE,"onFunasrSentenceBegin: status code=%d, task id=%s, index=%d, time=%d\n", cbEvent->getStatusCode(), cbEvent->getTaskId(),
-//                    cbEvent->getSentenceIndex(),
-//                    cbEvent->getSentenceTime());
 }
 
 /**
