@@ -182,6 +182,9 @@ void onFunasrChannelClosed(fun_asr_context_t *pvt) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrChannelClosed: funasr\n");
     }
     if (pvt->asr_callback) {
+        if (fun_asr_globals->_debug) {
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrChannelClosed: call on_asr_stopped_func %p\n", pvt->asr_callback->on_asr_stopped_func);
+        }
         pvt->asr_callback->on_asr_stopped_func(pvt->asr_callback->asr_caller);
     } else {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onFunasrChannelClosed: pvt->asr_callback is null\n");
