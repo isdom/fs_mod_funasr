@@ -795,7 +795,7 @@ static void stop_fun_asr(fun_asr_context_t *pvt) {
         }
     } else {
         if (fun_asr_globals->_debug) {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE,
                               "fun asr has already stopped and released on channel:%s\n",
                               switch_channel_get_name(channel));
         }
