@@ -749,7 +749,7 @@ static bool send_audio_to_fun_asr(fun_asr_context_t *pvt, void *data, uint32_t d
             if (ec) {
                 pvt->stopped = 1;
                 switch_channel_t *channel = switch_core_session_get_channel(pvt->session);
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "send audio failed: %s -> on channel: %s\n",
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "send audio failed: %s -> on channel: %s\n",
                                   ec.message().c_str(), switch_channel_get_name(channel));
                 pvt->fac->stop();
                 delete pvt->fac;
