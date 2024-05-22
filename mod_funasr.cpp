@@ -894,7 +894,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_funasr_load) {
 
     SWITCH_ADD_API(api_interface, "funasr_debug", "Set funasr debug", mod_funasr_debug, FUN_ASR_DEBUG_SYNTAX);
 
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "mod_funasr loaded\n");
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_funasr loaded\n");
 
     return SWITCH_STATUS_SUCCESS;
 }
