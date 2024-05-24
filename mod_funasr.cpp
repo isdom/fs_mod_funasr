@@ -734,7 +734,7 @@ static bool send_audio_to_fun_asr(fun_asr_context_t *pvt, void *data, uint32_t d
             memcpy(data, pvt->re_sampler->to, pvt->re_sampler->to_len * 2 * 1);
             data_len = pvt->re_sampler->to_len * 2 * 1;
             if (fun_asr_globals->_debug) {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "ASR new samples:%d\n",
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "ASR new samples:%d\n",
                                   pvt->re_sampler->to_len);
             }
         }
