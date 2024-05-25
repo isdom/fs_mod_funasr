@@ -894,7 +894,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_funasr_load) {
 
     SWITCH_ADD_API(api_interface, "funasr_debug", "Set funasr debug", mod_funasr_debug, FUN_ASR_DEBUG_SYNTAX);
 
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_funasr loaded\n");
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mod_funasr loaded\n");
 
     return SWITCH_STATUS_SUCCESS;
 }
@@ -906,7 +906,7 @@ SWITCH_MODULE_SHUTDOWN_FUNCTION(mod_funasr_shutdown) {
     // unregister global state handlers
     switch_core_remove_state_handler(&fun_asr_cs_handlers);
 
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, " mod_funasr shutdown called\n");
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, " mod_funasr unload\n");
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, " mod_funasr shutdown called\n");
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, " mod_funasr unload\n");
     return SWITCH_STATUS_SUCCESS;
 }
