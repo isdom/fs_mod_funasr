@@ -685,7 +685,7 @@ static bool start_fun_asr(fun_asr_context_t *pvt, asr_callback_t *asr_callback) 
             pvt->asr_callback = asr_callback;
             funasr_client *fac = generateAsrClient(pvt);
             if (!fac) {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Asr Client init failed.%s\n",
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Asr Client init failed.%s\n",
                                   switch_channel_get_name(channel));
                 ret_val = false;
                 goto unlock;
