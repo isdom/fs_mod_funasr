@@ -218,7 +218,7 @@ context_ptr OnTlsInit(const websocketpp::connection_hdl &) {
                 asio::ssl::context::no_sslv3 | asio::ssl::context::single_dh_use);
 
     } catch (std::exception &e) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR,
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING,
                           "OnTlsInit asio::ssl::context::set_options exception: %s\n", e.what());
     }
     return ctx;
