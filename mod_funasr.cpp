@@ -332,7 +332,7 @@ public:
         m_thread.reset(new websocketpp::lib::thread(&websocketpp::client<T>::run, &m_client));
 
         if (fun_asr_globals->_debug) {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "start send wsc first msg\n");
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "start send wsc first msg\n");
         }
         // first message
         bool wait = false;
