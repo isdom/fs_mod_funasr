@@ -378,7 +378,7 @@ public:
                                   ec.message().c_str());
             } else {
                 if (fun_asr_globals->_debug) {
-                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "funasr send begin msg success\n");
+                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "funasr send begin msg success\n");
                 }
             }
         }
