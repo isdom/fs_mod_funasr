@@ -424,7 +424,7 @@ public:
     // The close handler will signal that we should stop sending data
     void on_close(const websocketpp::connection_hdl &) {
         if (fun_asr_globals->_debug) {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Connection closed, stopping data!\n");
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Connection closed, stopping data!\n");
         }
 
         {
