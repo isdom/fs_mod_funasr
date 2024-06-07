@@ -877,7 +877,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_funasr_load) {
     switch_api_interface_t *api_interface = nullptr;
     *module_interface = switch_loadable_module_create_module_interface(pool, modname);
 
-    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "mod_funasr load starting\n");
+    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mod_funasr load starting\n");
 
     fun_asr_globals = (fun_asr_global_t *)switch_core_alloc(pool, sizeof(fun_asr_global_t));
 
