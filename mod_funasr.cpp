@@ -79,7 +79,7 @@ typedef struct {
  */
 void onFunasrTranscriptionStarted(fun_asr_context_t *pvt) {
     if (fun_asr_globals->_debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrTranscriptionStarted: funasr\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "onFunasrTranscriptionStarted: funasr\n");
     }
     switch_mutex_lock(pvt->mutex);
     pvt->started = 1;
