@@ -88,7 +88,7 @@ void onFunasrTranscriptionStarted(fun_asr_context_t *pvt) {
 
     if (pvt->asr_callback) {
         if (fun_asr_globals->_debug) {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrTranscriptionStarted: call on_asr_started_func %p\n", pvt->asr_callback->on_asr_started_func);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "onFunasrTranscriptionStarted: call on_asr_started_func %p\n", pvt->asr_callback->on_asr_started_func);
         }
         pvt->asr_callback->on_asr_started_func(pvt->asr_callback->asr_caller);
     } else {
