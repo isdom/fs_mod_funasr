@@ -103,7 +103,7 @@ void onFunasrTranscriptionStarted(fun_asr_context_t *pvt) {
  */
 void onFunasrSentenceBegin(fun_asr_context_t *pvt) {
     if (fun_asr_globals->_debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrSentenceBegin: funasr\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "onFunasrSentenceBegin: funasr\n");
     }
 }
 
