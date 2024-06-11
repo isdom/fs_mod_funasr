@@ -115,7 +115,7 @@ void onFunasrSentenceBegin(fun_asr_context_t *pvt) {
  */
 void onFunasrSentenceEnd(fun_asr_context_t *pvt, const std::string &text) {
     if (fun_asr_globals->_debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrSentenceEnd: funasr\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "onFunasrSentenceEnd: funasr\n");
     }
     if (pvt->asr_callback) {
         if (fun_asr_globals->_debug) {
