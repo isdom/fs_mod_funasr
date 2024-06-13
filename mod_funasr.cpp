@@ -135,7 +135,7 @@ void onFunasrSentenceEnd(fun_asr_context_t *pvt, const std::string &text) {
  */
 void onFunasrTranscriptionResultChanged(fun_asr_context_t *pvt, const std::string &text) {
     if (fun_asr_globals->_debug) {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrTranscriptionResultChanged: funasr\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "onFunasrTranscriptionResultChanged: funasr\n");
     }
     if (pvt->asr_callback) {
         if (fun_asr_globals->_debug) {
