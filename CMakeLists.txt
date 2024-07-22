@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(mode_funasr)
+project(mod_funasr)
 
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "The C++ version to be used.")
 
