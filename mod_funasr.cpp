@@ -13,10 +13,10 @@
 
 typedef struct {
     bool _debug;
-    switch_atomic_t fun_asr_concurrent_cnt;
-} fun_asr_global_t;
+    switch_atomic_t funasr_concurrent_cnt;
+} funasr_global_t;
 
-fun_asr_global_t *funasr_globals;
+funasr_global_t *funasr_globals;
 
 template<typename T>
 class WebsocketClient;
@@ -682,7 +682,7 @@ static void *init_fun_asr(switch_core_session_t *session, const switch_codec_imp
     }
 
     // increment funasr concurrent count
-    switch_atomic_inc(&funasr_globals->fun_asr_concurrent_cnt);
+    switch_atomic_inc(&funasr_globals->funasr_concurrent_cnt);
 
 end:
     switch_core_destroy_memory_pool(&pool);
@@ -841,7 +841,7 @@ static void destroy_fun_asr(funasr_context_t *pvt) {
     }
 
     // decrement funasr concurrent count
-    switch_atomic_dec(&funasr_globals->fun_asr_concurrent_cnt);
+    switch_atomic_dec(&funasr_globals->funasr_concurrent_cnt);
 
     if (pvt->re_sampler) {
         switch_resample_destroy(&pvt->re_sampler);
@@ -860,7 +860,7 @@ static void destroy_fun_asr(funasr_context_t *pvt) {
 }
 
 SWITCH_STANDARD_API(funasr_concurrent_cnt_function) {
-    const uint32_t concurrent_cnt = switch_atomic_read (&funasr_globals->fun_asr_concurrent_cnt);
+    const uint32_t concurrent_cnt = switch_atomic_read (&funasr_globals->funasr_concurrent_cnt);
     stream->write_function(stream, "%d\n", concurrent_cnt);
     switch_event_t *event = nullptr;
     if (switch_event_create(&event, SWITCH_EVENT_CUSTOM) == SWITCH_STATUS_SUCCESS) {
@@ -901,7 +901,7 @@ SWITCH_MODULE_LOAD_FUNCTION(mod_funasr_load) {
 
     switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "mod_funasr load starting\n");
 
-    funasr_globals = (fun_asr_global_t *)switch_core_alloc(pool, sizeof(fun_asr_global_t));
+    funasr_globals = (funasr_global_t *)switch_core_alloc(pool, sizeof(funasr_global_t));
 
     funasr_globals->_debug = false;
 
