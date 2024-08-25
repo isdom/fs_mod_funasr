@@ -129,7 +129,14 @@ void onFunasrSentenceEnd(funasr_context_t *pvt, const std::string &text) {
         if (funasr_globals->_debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "onFunasrSentenceEnd: call on_asr_sentence_end_func %p\n", pvt->asr_callback->on_asr_sentence_end_func);
         }
-        pvt->asr_callback->on_asr_sentence_end_func(pvt->asr_callback->asr_caller, text.c_str());
+        asr_sentence_result_t asr_sentence_result = {
+                -1,
+                -1,
+                -1,
+                0.0,
+                text.c_str()
+        };
+        pvt->asr_callback->on_asr_sentence_end_func(pvt->asr_callback->asr_caller, &asr_sentence_result);
     } else {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onFunasrSentenceEnd: pvt->asr_callback is null\n");
     }
@@ -149,7 +156,14 @@ void onFunasrTranscriptionResultChanged(funasr_context_t *pvt, const std::string
         if (funasr_globals->_debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrTranscriptionResultChanged: call on_asr_result_changed_func %p\n", pvt->asr_callback->on_asr_result_changed_func);
         }
-        pvt->asr_callback->on_asr_result_changed_func(pvt->asr_callback->asr_caller, text.c_str());
+        asr_sentence_result_t asr_sentence_result = {
+                -1,
+                -1,
+                -1,
+                0.0,
+                text.c_str()
+        };
+        pvt->asr_callback->on_asr_result_changed_func(pvt->asr_callback->asr_caller, &asr_sentence_result);
     } else {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onFunasrTranscriptionResultChanged: pvt->asr_callback is null\n");
     }
