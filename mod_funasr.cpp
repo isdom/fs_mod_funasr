@@ -4,6 +4,8 @@
 
 #define ASIO_STANDALONE 1
 
+#define ENABLE_WSS 0
+
 #include <websocketpp/client.hpp>
 #include <websocketpp/common/thread.hpp>
 #include <websocketpp/config/asio_client.hpp>
@@ -21,7 +23,11 @@ funasr_global_t *funasr_globals;
 template<typename T>
 class WebsocketClient;
 
+#if ENABLE_WSS
 typedef WebsocketClient<websocketpp::config::asio_tls_client> funasr_client;
+#else
+typedef WebsocketClient<websocketpp::config::asio_client> funasr_client;
+#endif
 
 // public declare
 
@@ -500,7 +506,9 @@ funasr_client *generateAsrClient(funasr_context_t *pvt) {
         return nullptr;
     }
 
+#if ENABLE_WSS
     fac->m_client.set_tls_init_handler(bind(&OnTlsInit, ::_1));
+#endif
 
     if (funasr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "funasr url is:%s, vol multiplier is:%f\n",
