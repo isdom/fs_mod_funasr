@@ -305,7 +305,7 @@ public:
                 nlohmann::json asr_result = nlohmann::json::parse(payload);
                 std::string id_str = getThreadIdOfString(std::this_thread::get_id());
                 if (funasr_globals->_debug) {
-                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "thread: %s, on_message = %s\n",
+                    switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "thread: %s, on_message = %s\n",
                                       id_str.c_str(),
                                       payload.c_str());
                 }
@@ -767,7 +767,7 @@ static bool send_audio_to_fun_asr(funasr_context_t *pvt, void *data, uint32_t da
             memcpy(data, pvt->re_sampler->to, pvt->re_sampler->to_len * 2 * 1);
             data_len = pvt->re_sampler->to_len * 2 * 1;
             if (funasr_globals->_debug) {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "ASR new samples:%d\n",
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "ASR new samples:%d\n",
                                   pvt->re_sampler->to_len);
             }
         }
@@ -795,7 +795,7 @@ static bool send_audio_to_fun_asr(funasr_context_t *pvt, void *data, uint32_t da
         }
         ret_val = true;
         if (funasr_globals->_debug) {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "send_audio_to_fun_asr: send audio %d\n",
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "send_audio_to_fun_asr: send audio %d\n",
                               data_len);
         }
     } else {
