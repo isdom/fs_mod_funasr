@@ -107,27 +107,30 @@ void onFunasrTranscriptionStarted(funasr_context_t *ctx) {
 /**
  * @brief 一句话开始回调函数
  *
- * @param pvt
+ * @param ctx
  */
-void onFunasrSentenceBegin(funasr_context_t *pvt) {
+void onFunasrSentenceBegin(funasr_context_t *ctx) {
     if (funasr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "onFunasrSentenceBegin: funasr\n");
+    }
+    if (ctx->asr_callback) {
+        ctx->asr_callback->on_asr_sentence_begin_func(ctx->asr_callback->asr_caller);
     }
 }
 
 /**
  * @brief 一句话结束回调函数
  *
- * @param pvt
+ * @param ctx
  * @param text
  */
-void onFunasrSentenceEnd(funasr_context_t *pvt, const std::string &text) {
+void onFunasrSentenceEnd(funasr_context_t *ctx, const std::string &text) {
     if (funasr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "onFunasrSentenceEnd: funasr\n");
     }
-    if (pvt->asr_callback) {
+    if (ctx->asr_callback) {
         if (funasr_globals->_debug) {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "onFunasrSentenceEnd: call on_asr_sentence_end_func %p\n", pvt->asr_callback->on_asr_sentence_end_func);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "onFunasrSentenceEnd: call on_asr_sentence_end_func %p\n", ctx->asr_callback->on_asr_sentence_end_func);
         }
         asr_sentence_result_t asr_sentence_result = {
                 -1,
@@ -136,25 +139,25 @@ void onFunasrSentenceEnd(funasr_context_t *pvt, const std::string &text) {
                 0.0,
                 text.c_str()
         };
-        pvt->asr_callback->on_asr_sentence_end_func(pvt->asr_callback->asr_caller, &asr_sentence_result);
+        ctx->asr_callback->on_asr_sentence_end_func(ctx->asr_callback->asr_caller, &asr_sentence_result);
     } else {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onFunasrSentenceEnd: pvt->asr_callback is null\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onFunasrSentenceEnd: ctx->asr_callback is null\n");
     }
 }
 
 /**
  * @brief 识别结果变化回调函数
  *
- * @param pvt
+ * @param ctx
  * @param text
  */
-void onFunasrTranscriptionResultChanged(funasr_context_t *pvt, const std::string &text) {
+void onFunasrTranscriptionResultChanged(funasr_context_t *ctx, const std::string &text) {
     if (funasr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "onFunasrTranscriptionResultChanged: funasr\n");
     }
-    if (pvt->asr_callback) {
+    if (ctx->asr_callback) {
         if (funasr_globals->_debug) {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrTranscriptionResultChanged: call on_asr_result_changed_func %p\n", pvt->asr_callback->on_asr_result_changed_func);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrTranscriptionResultChanged: call on_asr_result_changed_func %p\n", ctx->asr_callback->on_asr_result_changed_func);
         }
         asr_sentence_result_t asr_sentence_result = {
                 -1,
@@ -163,18 +166,18 @@ void onFunasrTranscriptionResultChanged(funasr_context_t *pvt, const std::string
                 0.0,
                 text.c_str()
         };
-        pvt->asr_callback->on_asr_result_changed_func(pvt->asr_callback->asr_caller, &asr_sentence_result);
+        ctx->asr_callback->on_asr_result_changed_func(ctx->asr_callback->asr_caller, &asr_sentence_result);
     } else {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onFunasrTranscriptionResultChanged: pvt->asr_callback is null\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onFunasrTranscriptionResultChanged: ctx->asr_callback is null\n");
     }
 }
 
 /**
  * @brief 语音转写结束回调函数
  *
- * @param pvt
+ * @param ctx
  */
-void onFunasrTranscriptionCompleted(funasr_context_t *pvt) {
+void onFunasrTranscriptionCompleted(funasr_context_t *ctx) {
     if (funasr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrTranscriptionCompleted: funasr\n");
     }
@@ -183,33 +186,33 @@ void onFunasrTranscriptionCompleted(funasr_context_t *pvt) {
 /**
  * @brief 异常识别回调函数
  *
- * @param pvt
+ * @param ctx
  */
-void onFunasrTaskFailed(funasr_context_t *pvt) {
+void onFunasrTaskFailed(funasr_context_t *ctx) {
     if (funasr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrTaskFailed: funasr\n");
     }
-    switch_mutex_lock(pvt->mutex);
-    pvt->started = 0;
-    switch_mutex_unlock(pvt->mutex);
+    switch_mutex_lock(ctx->mutex);
+    ctx->started = 0;
+    switch_mutex_unlock(ctx->mutex);
 }
 
 /**
  * @brief 识别通道关闭回调函数
  *
- * @param pvt
+ * @param ctx
  */
-void onFunasrChannelClosed(funasr_context_t *pvt) {
+void onFunasrChannelClosed(funasr_context_t *ctx) {
     if (funasr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrChannelClosed: funasr\n");
     }
-    if (pvt->asr_callback) {
+    if (ctx->asr_callback) {
         if (funasr_globals->_debug) {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrChannelClosed: call on_asr_stopped_func %p\n", pvt->asr_callback->on_asr_stopped_func);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "onFunasrChannelClosed: call on_asr_stopped_func %p\n", ctx->asr_callback->on_asr_stopped_func);
         }
-        pvt->asr_callback->on_asr_stopped_func(pvt->asr_callback->asr_caller);
+        ctx->asr_callback->on_asr_stopped_func(ctx->asr_callback->asr_caller);
     } else {
-        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onFunasrChannelClosed: pvt->asr_callback is null\n");
+        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onFunasrChannelClosed: ctx->asr_callback is null\n");
     }
 }
 
