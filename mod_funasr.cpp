@@ -130,7 +130,7 @@ void onFunasrSentenceBegin(funasr_context_t *ctx) {
  * @param ctx
  * @param text
  */
-void onFunasrSentenceEnd(funasr_context_t *ctx, const std::string &text) {
+void onFunasrSentenceEnd(funasr_context_t *ctx, asr_sentence_result_t *asr_sentence_result) {
     if (funasr_globals->_debug) {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "onFunasrSentenceEnd: funasr\n");
     }
@@ -138,14 +138,7 @@ void onFunasrSentenceEnd(funasr_context_t *ctx, const std::string &text) {
         if (funasr_globals->_debug) {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "onFunasrSentenceEnd: call on_asr_sentence_end_func %p\n", ctx->asr_callback->on_asr_sentence_end_func);
         }
-        asr_sentence_result_t asr_sentence_result = {
-                -1,
-                -1,
-                -1,
-                0.0,
-                text.c_str()
-        };
-        ctx->asr_callback->on_asr_sentence_end_func(ctx->asr_callback->asr_caller, &asr_sentence_result);
+        ctx->asr_callback->on_asr_sentence_end_func(ctx->asr_callback->asr_caller, asr_sentence_result);
     } else {
         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "onFunasrSentenceEnd: ctx->asr_callback is null\n");
     }
@@ -318,12 +311,6 @@ public:
                     //  {"is_final":false,"mode":"2pass-online","text":"没必","wav_name":"asr"}
                     onFunasrTranscriptionResultChanged(m_asr_ctx, asr_result["text"]);
                 } else if (asr_result["mode"] == "2pass-offline") {
-                    if (funasr_globals->_debug) {
-                        const std::string &tm_str = asr_result["timestamp"];
-                        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "timestamp: %s\n",
-                                          tm_str.c_str());
-                    }
-
                     // sample response:
                     //  {"is_final":false,"mode":"2pass-offline",
                     //  "stamp_sents":[{"end":3485,"punc":"","start":2970,"text_seg":"可 以","ts_list":[[2970,3130],[3130,3485]]}],
@@ -338,7 +325,45 @@ public:
                     //  "stamp_sents":[{"end":-1,"punc":"，","start":-1,"text_seg":"","ts_list":[]},{"end":22195,"punc":"","start":21460,"text_seg":"没 必 要",
                     //          "ts_list":[[21460,21700],[21700,21860],[21860,22195]]}],
                     //  "text":"，没必要","timestamp":"[[21460,21700],[21700,21860],[21860,22195]]","wav_name":"asr"}
-                    onFunasrSentenceEnd(m_asr_ctx, asr_result["text"]);
+                    const std::string &tm_str = asr_result["timestamp"];
+                    const std::string &text = asr_result["text"];
+
+                    if (funasr_globals->_debug) {
+                        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "timestamp: %s\n",
+                                          tm_str.c_str());
+                    }
+                    int32_t sentence_begin_time = -1, sentence_time = -1;
+                    {
+                        const size_t first_begin_pos = tm_str.find("[[");
+                        if (std::string::npos != first_begin_pos) {
+                            const size_t first_end_pos = tm_str.find(',');
+                            if (std::string::npos != first_end_pos) {
+                                sentence_begin_time = (int32_t) strtol(
+                                        tm_str.substr(first_begin_pos + 2, first_end_pos - first_begin_pos - 2).c_str(),
+                                        nullptr, 10);
+                            }
+                        }
+                    }
+                    {
+                        const size_t last_begin_pos = tm_str.find_last_of(',');
+                        if (std::string::npos != last_begin_pos) {
+                            const size_t last_end_pos = tm_str.find_last_of("]]");
+                            if (std::string::npos != last_end_pos) {
+                                sentence_time = (int32_t)strtol(
+                                        tm_str.substr(last_begin_pos + 1, last_end_pos - last_begin_pos - 1).c_str(),
+                                        nullptr, 10);
+                            }
+                        }
+                    }
+
+                    asr_sentence_result_t asr_sentence_result = {
+                            -1,
+                            sentence_begin_time,
+                            sentence_time,
+                            0.0,
+                            text.c_str()
+                    };
+                    onFunasrSentenceEnd(m_asr_ctx, &asr_sentence_result);
                 }
 
                 if (asr_result["is_final"] == true) {
