@@ -729,8 +729,8 @@ static bool start_fun_asr(funasr_context_t *pvt, asr_callback_t *asr_callback) {
             if (pvt->fac->start(std::string(pvt->funasr_url), "2pass", chunk_size) < 0) {
                 pvt->stopped = 1;
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE,
-                                  "start() failed. may be can not connect server. please check network or firewalld:%s\n",
-                                  switch_channel_get_name(channel));
+                                  "start() failed. may be can not connect server(%s). please check network or firewalld:%s\n",
+                                  pvt->funasr_url, switch_channel_get_name(channel));
                 pvt->fac->stop();
                 delete pvt->fac;
                 pvt->fac = nullptr;
