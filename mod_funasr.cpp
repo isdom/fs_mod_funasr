@@ -311,8 +311,33 @@ public:
                 }
 
                 if (asr_result["mode"] == "2pass-online") {
+                    // sample response:
+                    // {"is_final":false,"mode":"2pass-online","text":"可","wav_name":"asr"}
+                    // {"is_final":false,"mode":"2pass-online","text":"我现在","wav_name":"asr"}
+                    // {"is_final":false,"mode":"2pass-online","text":"不","wav_name":"asr"}
+                    //  {"is_final":false,"mode":"2pass-online","text":"没必","wav_name":"asr"}
                     onFunasrTranscriptionResultChanged(m_asr_ctx, asr_result["text"]);
                 } else if (asr_result["mode"] == "2pass-offline") {
+                    if (funasr_globals->_debug) {
+                        const std::string &tm_str = asr_result["timestamp"];
+                        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "timestamp: %s\n",
+                                          tm_str.c_str());
+                    }
+
+                    // sample response:
+                    //  {"is_final":false,"mode":"2pass-offline",
+                    //  "stamp_sents":[{"end":3485,"punc":"","start":2970,"text_seg":"可 以","ts_list":[[2970,3130],[3130,3485]]}],
+                    //  "text":"可以","timestamp":"[[2970,3130],[3130,3485]]","wav_name":"asr"}
+                    //
+                    //  {"is_final":false,"mode":"2pass-offline",
+                    //  "stamp_sents":[{"end":-1,"punc":"，","start":-1,"text_seg":"","ts_list":[]},{"end":14485,"punc":"","start":13500,"text_seg":"我 现 在 不 用",
+                    //          "ts_list":[[13500,13720],[13720,13840],[13840,14000],[14000,14100],[14100,14485]]}],
+                    //  "text":"，我现在不用","timestamp":"[[13500,13720],[13720,13840],[13840,14000],[14000,14100],[14100,14485]]","wav_name":"asr"}
+                    //
+                    //  {"is_final":false,"mode":"2pass-offline",
+                    //  "stamp_sents":[{"end":-1,"punc":"，","start":-1,"text_seg":"","ts_list":[]},{"end":22195,"punc":"","start":21460,"text_seg":"没 必 要",
+                    //          "ts_list":[[21460,21700],[21700,21860],[21860,22195]]}],
+                    //  "text":"，没必要","timestamp":"[[21460,21700],[21700,21860],[21860,22195]]","wav_name":"asr"}
                     onFunasrSentenceEnd(m_asr_ctx, asr_result["text"]);
                 }
 
